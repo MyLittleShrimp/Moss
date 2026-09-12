@@ -59,6 +59,16 @@ func run_test() -> void:
 	world.data.rare_misses.iceland = 2
 	check(world.roll_rare("iceland") == "auroraglass", "release far-travel three visit guarantee")
 	check(world.rare_guarantee("creek") == 8, "short routes keep eight visit guarantee")
+	check(world.rare_guarantee("tokyo") == 5 and world.rare_guarantee("istanbul") == 4, "release Tokyo five and Istanbul four")
+	for target in ["tokyo", "istanbul"]:
+		world.data.rare_misses[target] = world.rare_guarantee(target) - 1
+		check(world.roll_rare(target) == world.Content.ROUTES[target].rare, "new final visit guaranteed")
+		world.data.rare_misses[target] = 2
+		var can_miss = false
+		for seed_value in range(30):
+			world.rng.seed = seed_value
+			can_miss = can_miss or world.roll_rare(target).is_empty()
+		check(can_miss, "third visit no longer guaranteed")
 	check(not world.command("pace", {"pace": "demo"}).ok, "release denies acceleration")
 	world.data.pace = "demo"
 	check(world.crop_seconds("strawberry") == 86400, "import demo cannot accelerate release")

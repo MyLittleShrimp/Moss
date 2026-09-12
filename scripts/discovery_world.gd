@@ -24,11 +24,11 @@ func give(item: String) -> void:
 func roll_rare(destination: String) -> String:
 	var misses = int(data.rare_misses[destination])
 	var chance = minf(1.0, float(Content.ROUTES[destination].chance) + maxf(0, misses - 2) * 0.12)
-	if release_timing and rare_guarantee(destination) == 3: chance = minf(1.0, float(Content.ROUTES[destination].chance) + misses * 0.25)
+	if release_timing and destination in ["tokyo", "istanbul", "paris", "iceland"]: chance = minf(1.0, float(Content.ROUTES[destination].chance) + misses * 0.25)
 	return Content.ROUTES[destination].rare if misses >= rare_guarantee(destination) - 1 or rng.randf() < chance else ""
 
 func rare_guarantee(destination: String) -> int:
-	return 3 if release_timing and destination in ["tokyo", "istanbul", "paris", "iceland"] else 8
+	return {"tokyo": 5, "istanbul": 4, "paris": 3, "iceland": 3}.get(destination, 8) if release_timing else 8
 
 func advance(now: float) -> bool:
 	now = maxf(now, float(data.last_seen))
