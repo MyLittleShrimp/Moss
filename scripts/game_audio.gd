@@ -1,7 +1,9 @@
 extends Node
 ## Audio is presentation only: no inventory, save, or AI mutations.
-const CITIES = {"creek":"10", "market":"11", "hill":"12", "hangzhou":"13", "dali":"14", "tokyo":"15", "istanbul":"16", "paris":"17", "iceland":"18", "shanghai":"19", "dubai":"20", "london":"21", "stockholm":"22", "copenhagen":"22"}
-const PAGES = {"田园":"03", "厨房":"04", "远行":"09", "小铺":"11", "收藏":"23", "衣橱":"24", "记忆":"08", "照料":"08", "信箱":"23", "小屋":"02"}
+const TRAVEL_THEMES = {"tokyo":"music_15", "istanbul":"music_16", "paris":"music_17", "iceland":"music_18"}
+var shuffle_bag: Array[String] = []
+var pending_track = ""
+var last_departure = 0.0
 var host
 var catalog = {}
 var volumes = {"master":0.8, "music":0.65, "ambient":0.4, "effects":0.7}
@@ -16,17 +18,12 @@ var music_tween: Tween
 var ambient_tween: Tween
 var current_track = ""
 var current_ambient = ""
-var context = "home"
-var candidate = "home"
-var settled = 0.0
-var home_index = 0
 var observed_world
 var last_trip = 0
 var last_mail = ""
 var last_cue = ""
 var cue_count = 0
 var previewing = false
-var intro_active = true
 var poll = 0.0
 
 func _exit_tree() -> void:
@@ -115,7 +112,6 @@ func switch_music(id: String) -> void:
 	incoming.volume_db = -60
 	incoming.play()
 	current_track = id
-	if id != "main_theme": intro_active = false
 	music_tween = create_tween().set_parallel(true)
 	music_tween.tween_property(outgoing, "volume_db", -60.0, 2.5)
 	music_tween.tween_property(incoming, "volume_db", 0.0, 2.5)
@@ -138,17 +134,29 @@ func switch_ambient(id: String) -> void:
 		ambient_tween.tween_property(incoming, "volume_db", 0.0, 2)
 	ambient_tween.chain().tween_callback(outgoing.stop)
 
+func next_album_track() -> String:
+	if not pending_track.is_empty():
+		var next = pending_track
+		pending_track = ""
+		shuffle_bag.erase(next)
+		if next != current_track: return next
+	if shuffle_bag.is_empty():
+		for i in range(1, 25): shuffle_bag.append("music_%02d" % i)
+		shuffle_bag.shuffle()
+		if shuffle_bag[-1] == current_track:
+			var first = shuffle_bag[0]
+			shuffle_bag[0] = shuffle_bag[-1]
+			shuffle_bag[-1] = first
+	return shuffle_bag.pop_back()
+
+func queue_travel_theme(destination: String) -> void:
+	var track = str(TRAVEL_THEMES.get(destination, ""))
+	pending_track = track if track != current_track else ""
+
 func music_finished(index: int) -> void:
 	if index != music_index: return
-	intro_active = false
-	if context == "home" and not previewing:
-		home_index = (home_index + 1) % 4
-		current_track = ""
-		switch_music(["main_theme", "music_02", "music_01", "music_24"][home_index])
-	else:
-		var repeat = current_track
-		current_track = ""
-		switch_music(repeat)
+	previewing = false
+	switch_music(next_album_track())
 
 func ambient_finished(index: int) -> void:
 	if index == ambient_index and not current_ambient.is_empty(): ambient_players[index].play()
@@ -166,21 +174,12 @@ func play_cue(id: String) -> void:
 func reset_observation() -> void:
 	if host == null: return
 	observed_world = host.world
+	last_departure = float(host.world.data.trip_end)
+	pending_track = ""
 	last_trip = int(host.world.data.trip_count)
 	var letters = host.world.data.get("travel_mail", [])
 	last_mail = "" if letters.is_empty() else str(letters[0].id)
 	if is_instance_valid(cue): cue.stop(); apply_volumes()
-
-func desired_context(hour: int = -1) -> String:
-	if host.postcard_view.visible:
-		if host.postcard_view.letter_mode: return "music_23"
-		return "music_" + CITIES.get(host.postcard_view.audio_destination, "23")
-	if host.home_interactions.book_panel.visible: return "music_07"
-	if host.life_panel.visible: return "music_" + PAGES.get(host.life_panel.page, "02")
-	if host.world.data.weather.kind == "rainy": return "music_05"
-	if hour < 0: hour = Time.get_datetime_dict_from_system().hour
-	if hour >= 21 or hour < 6: return "music_06"
-	return "home"
 
 func desired_ambient() -> String:
 	if host.postcard_view.visible:
@@ -198,19 +197,19 @@ func preview(id: String) -> void:
 	switch_music(id)
 
 func resume_scene() -> void:
+	# Returning from a manual preview never interrupts the current recording.
 	previewing = false
-	context = desired_context()
-	candidate = context
-	settled = 0
-	switch_music("main_theme" if context == "home" else context)
 
 func _process(delta: float) -> void:
 	if host == null: return
 	poll += delta
 	if poll < 0.5: return
-	var step = poll
 	poll = 0
 	if observed_world != host.world: reset_observation()
+	var departure = float(host.world.data.trip_end)
+	if departure > 0 and departure != last_departure:
+		queue_travel_theme(str(host.world.data.trip_snapshot.get("planned", host.world.data.active_event.get("destination", ""))))
+	last_departure = departure
 	var trip = int(host.world.data.trip_count)
 	var letters = host.world.data.get("travel_mail", [])
 	var mail = "" if letters.is_empty() else str(letters[0].id)
@@ -218,13 +217,6 @@ func _process(delta: float) -> void:
 	elif mail != last_mail and not mail.is_empty(): play_cue("mail")
 	last_trip = trip
 	last_mail = mail
-	var desired = desired_context()
-	# Keep preview and the underlying scene while adjusting settings.
 	if host.settings_panel.visible: return
 	if previewing: resume_scene()
-	if desired != candidate: candidate = desired; settled = 0
-	else: settled += step
-	if candidate != context and settled >= 4 and not (intro_active and candidate in ["home", "music_05", "music_06"]):
-		context = candidate
-		switch_music("main_theme" if context == "home" else context)
 	switch_ambient(desired_ambient())

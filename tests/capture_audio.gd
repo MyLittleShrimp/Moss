@@ -40,30 +40,45 @@ func qa_flow() -> void:
 	await qa_click(settings_panel.actions.audio_preview)
 	assert(audio.previewing and audio.current_track == "main_theme")
 	settings_panel.hide()
-	for city in audio.CITIES:
-		postcard_view.audio_destination = city
-		postcard_view.letter_mode = false
-		postcard_view.show()
-		assert(audio.desired_context(12) == "music_" + audio.CITIES[city])
-	postcard_view.letter_mode = true
-	assert(audio.desired_context(12) == "music_23")
-	postcard_view.hide()
-	world.data.weather.kind = "rainy"
-	assert(audio.desired_context(12) == "music_05" and audio.desired_ambient() == "rain")
-	world.data.weather.kind = "sunny"
-	assert(audio.desired_context(23) == "music_06")
-	life_panel.open("田园")
-	assert(audio.desired_context(12) == "music_03" and audio.desired_ambient() == "birds")
+	audio.resume_scene()
+	for page_name in ["田园", "厨房", "远行", "收藏", "记忆"]:
+		life_panel.open(page_name)
+		for i in range(12): audio._process(0.5)
+		assert(audio.current_track == "main_theme")
 	life_panel.hide()
-	audio.previewing = false
-	audio.context = "home"
-	audio.candidate = "home"
-	audio.settled = 0
-	life_panel.open("厨房")
-	audio._process(0.5)
+	world.data.weather.kind = "rainy"
+	audio._process(6)
+	assert(audio.current_track == "main_theme" and audio.current_ambient == "rain")
+	postcard_view.audio_destination = "iceland"
+	postcard_view.show()
+	audio._process(6)
 	assert(audio.current_track == "main_theme")
-	for i in range(9): audio._process(0.5)
-	assert(audio.current_track == "music_04")
+	postcard_view.hide()
+	# Two complete shuffle rounds, each track exactly once, no boundary repeat.
+	for round_index in range(2):
+		var seen = []
+		for i in range(24):
+			var previous = audio.current_track
+			var next = audio.next_album_track()
+			assert(next != previous and next not in seen and next != "main_theme")
+			seen.append(next)
+			audio.current_track = next
+		assert(seen.size() == 24)
+	audio.current_track = "main_theme"
+	audio.queue_travel_theme("iceland")
+	audio.queue_travel_theme("creek")
+	assert(audio.pending_track.is_empty())
+	audio.queue_travel_theme("iceland")
+	audio.queue_travel_theme("iceland")
+	assert(audio.pending_track == "music_18" and audio.current_track == "main_theme")
+	# Exercise the real AudioStreamPlayer.finished signal without waiting several minutes.
+	audio.music_players[audio.music_index].seek(audio.music_players[audio.music_index].stream.get_length() - 0.15)
+	await get_tree().create_timer(0.7).timeout
+	assert(audio.current_track == "music_18" and audio.pending_track.is_empty())
+	await get_tree().create_timer(2.6).timeout
+	audio.music_players[audio.music_index].seek(audio.music_players[audio.music_index].stream.get_length() - 0.15)
+	await get_tree().create_timer(0.7).timeout
+	assert(audio.current_track != "music_18" and audio.current_track.begins_with("music_"))
 	# Interrupted crossfades have bounded players and no stale callback stopping the new song.
 	audio.switch_music("music_15")
 	audio.switch_music("music_18")
@@ -84,8 +99,11 @@ func qa_flow() -> void:
 	world.rng.seed = 2
 	world.data.foods.potato_box = 8
 	world.data.rare_misses.iceland = 2
-	world.command("travel", {"destination":"iceland", "food":"potato_box"})
 	audio.reset_observation()
+	world.command("travel", {"destination":"iceland", "food":"potato_box"})
+	audio.current_track = "music_02"
+	audio._process(0.5)
+	assert(audio.pending_track == "music_18" and audio.current_track == "music_02")
 	var schedule = world.data.trip_snapshot.mail_schedule.duplicate(true)
 	assert(not schedule.is_empty())
 	world.advance(schedule[0].time)
@@ -110,5 +128,5 @@ func qa_flow() -> void:
 	await get_tree().create_timer(0.3).timeout
 	await shot("res://artifacts/g14-audio-settings-960.png")
 	AudioServer.remove_bus_effect(0, AudioServer.get_bus_effect_count(0)-1)
-	print("G14_AUDIO_PASS: 33 decoded streams; main theme; mixer peak=", peak, "; volumes/mute/persistence; 14 cities; weather/night; debounce/crossfade; mail/return/reveal; isolated saves; 960px")
+	print("G15_AUDIO_PASS: 33 decoded streams; main theme; mixer peak=", peak, "; volumes/mute/persistence; 24-track shuffle rounds; menu/weather continuity; queued theme; real finished signal; crossfade; mail/return/reveal; isolated saves; 960px")
 	get_tree().quit()

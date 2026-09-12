@@ -176,7 +176,7 @@ func audio_page() -> void:
 		var volume_key = entry[0]
 		slider.value_changed.connect(func(value): audio.set_volume(volume_key, value / 100.0); percent.text = "%d%%" % value)
 		actions["audio_" + volume_key] = slider
-	label("主旋律：苔间小屋 主旋律 Main theme。场景停留片刻后柔和切换；短暂翻页不会反复切歌。")
+	label("主旋律：苔间小屋 主旋律 Main theme。开场后24首专辑随机循环，整首播完再换；远行主题可排到下一首。")
 	var tracks = OptionButton.new()
 	for state in ["normal", "hover", "pressed", "focus"]:
 		tracks.add_theme_stylebox_override(state, host.box(Color("e7eadb"), 10))
@@ -192,7 +192,7 @@ func audio_page() -> void:
 	var controls = HBoxContainer.new()
 	body.add_child(controls)
 	button(controls, "试听选中曲目", func(): audio.preview(ids[tracks.selected]), "audio_preview")
-	button(controls, "恢复场景音乐", audio.resume_scene, "audio_resume")
+	button(controls, "恢复专辑循环", audio.resume_scene, "audio_resume")
 	button(controls, "试听来信提示", func(): audio.play_cue("mail"), "audio_cue")
 	button(controls, "保存声音设置", func(): feedback.text = "声音设置已保存。" if audio.save_settings() == OK else "保存失败，请检查本机目录权限。", "audio_save")
 

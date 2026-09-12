@@ -1,7 +1,11 @@
 """Verify audio resources in both built packs, then archive portable game folders."""
 from pathlib import Path
-import json, zipfile
+import json, zipfile, argparse
 root = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser()
+parser.add_argument('--label', default='G14')
+label = parser.parse_args().label
+assert label.isalnum()
 catalog = json.loads((root/'assets/audio/catalog.json').read_text(encoding='utf-8'))
 for channel in ['Release', 'Development']:
     target = root/'dist'/('Moss-'+channel)
@@ -13,7 +17,7 @@ for channel in ['Release', 'Development']:
             path = entry['path'].removeprefix('res://')
             assert path+'.import' in names or path in names, path
         assert len([n for n in names if n.endswith('.oggvorbisstr')]) == 33
-    destination = root/'dist'/f'Moss-{channel}-G14-Audio-Windows.zip'
+    destination = root/'dist'/f'Moss-{channel}-{label}-Audio-Windows.zip'
     with zipfile.ZipFile(destination, 'w', zipfile.ZIP_DEFLATED, compresslevel=3) as archive:
         for name in ['Moss.exe', 'game.zip', 'Start.cmd', '开始游玩.txt', 'GODOT-LICENSE.txt', 'GODOT-COPYRIGHT.txt']:
             archive.write(target/name, arcname=f'Moss-{channel}/{name}')
