@@ -1,0 +1,17 @@
+.godot/
+.tools/
+.local/
+*.tmp
+*.log
+__pycache__/
+.env
+artifacts/
+dist/
+*.enc
+*.dpapi
+proxy-token
+ai-settings.cfg
+export_templates/
+feature_profiles/
+script_templates/
+text_editor_themes/

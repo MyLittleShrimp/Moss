@@ -1,0 +1,8 @@
+{
+  "enabled": false,
+  "model": "",
+  "endpoint": "",
+  "protocol": "chat_completions",
+  "api_key_env": "MOSS_LLM_API_KEY",
+  "json_mode": false
+}

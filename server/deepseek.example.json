@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "model": "deepseek-v4-flash",
+  "endpoint": "https://api.deepseek.com/chat/completions",
+  "protocol": "chat_completions",
+  "api_key_env": "DEEPSEEK_API_KEY",
+  "credential_store": "windows_dpapi",
+  "json_mode": true
+}
