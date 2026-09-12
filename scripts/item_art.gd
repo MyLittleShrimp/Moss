@@ -5,6 +5,7 @@ static var cache: Dictionary = {}
 static var matte: ShaderMaterial
 
 static func texture(id: String) -> Texture2D:
+	if id == "mail": return load("res://assets/mail.svg")
 	if id == "unknown": return load("res://assets/unknown.svg")
 	if id == "pariscup": return texture("coffeecup")
 	if id == "stonelamp": return texture("basalt")
@@ -62,6 +63,7 @@ static func rug(id: String) -> Texture2D:
 	return result
 
 static func postcard(id: String) -> Texture2D:
+	if id in ["shanghai", "dubai", "london", "stockholm", "copenhagen"]: return load("res://assets/postcards/" + id + ".png")
 	if id in ["dali", "paris", "iceland"]: return load("res://assets/postcards/" + id + ".png")
 	var index = GameContent.ROUTES.keys().find(id)
 	var result = AtlasTexture.new()

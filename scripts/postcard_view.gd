@@ -8,8 +8,9 @@ var wish: Label
 var stamp: Label
 var close_button: Button
 var photo_button: Button
-var text_side: VBoxContainer
+var text_side: Control
 var large = false
+var letter_mode = false
 func _init(owner_node) -> void:
 	host = owner_node
 func _ready() -> void:
@@ -37,7 +38,7 @@ func _ready() -> void:
 	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	add_child(picture)
-	text_side = VBoxContainer.new()
+	text_side = Control.new()
 	text_side.position = Vector2(740, 138)
 	text_side.size = Vector2(550, 555)
 	text_side.add_theme_constant_override("separation", 14)
@@ -56,6 +57,8 @@ func _ready() -> void:
 	hide()
 func text(value: String, size: int) -> Label:
 	var label = Label.new()
+	label.custom_minimum_size.x = 550
+	label.size = Vector2(550, 30)
 	label.text = value
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_color_override("font_color", host.INK)
@@ -63,6 +66,8 @@ func text(value: String, size: int) -> Label:
 	text_side.add_child(label)
 	return label
 func open(id: String) -> void:
+	letter_mode = false
+	close_button.text = "收回相册 ×"
 	var card = host.world.postcard_content(id)
 	if card.is_empty(): return
 	picture.texture = Art.postcard(id)
@@ -74,10 +79,34 @@ func open(id: String) -> void:
 	layout_card()
 	show()
 func layout_card() -> void:
+	photo_button.visible = not letter_mode
+	picture.visible = not letter_mode
+	text_side.position = Vector2(240, 138) if letter_mode else Vector2(740, 138)
+	text_side.size = Vector2(960, 555) if letter_mode else Vector2(550, 555)
+	var positions = [0, 74, 135, 180, 475, 520]
+	var heights = [70, 56, 36, 275, 44, 30]
+	for i in range(text_side.get_child_count()):
+		var label = text_side.get_child(i)
+		label.position = Vector2(0, positions[i])
+		label.size = Vector2(text_side.size.x, heights[i])
 	picture.position = Vector2(140, 125)
 	picture.size = Vector2(580, 590) if not large else Vector2(1150, 590)
-	text_side.visible = not large
+	text_side.visible = letter_mode or not large
 	for node in get_children(): node.queue_redraw()
+
+func open_mail(entry: Dictionary) -> void:
+	if not host.world.command("read_mail", {"id": entry.id}).ok: return
+	letter_mode = entry.kind == "letter"
+	picture.texture = Art.postcard(entry.destination)
+	heading.text = "途中来信 · " + host.world.Mail.city_name(entry.destination)
+	close_button.text = "收回信箱 ×"
+	var date = Time.get_datetime_string_from_unix_time(int(entry.time)).replace("T", " ").left(16)
+	stamp.text = "◉ 寄出邮戳（UTC） " + date + "\n第 %d 次远行 · %s" % [entry.trip, "本地旅行手记" if letter_mode else "AI 预绘风景 / 本地旅行手记"]
+	message.text = entry.text
+	wish.text = "愿你今天的小日子，也有一点亮光。"
+	large = letter_mode
+	layout_card()
+	show()
 func _unhandled_key_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):
 		hide()

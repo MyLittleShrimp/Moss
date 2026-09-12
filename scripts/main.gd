@@ -3,6 +3,7 @@ extends Control
 const World = preload("res://scripts/discovery_world.gd")
 var parcel_view
 var parcel_button: Button
+var mail_button: Button
 var postcard_view
 var worn_outfit = ""
 const Content = preload("res://scripts/game_content.gd")
@@ -79,7 +80,8 @@ func _ready() -> void:
 	add_child(life_panel)
 	postcard_view = load("res://scripts/postcard_view.gd").new(self)
 	add_child(postcard_view)
-	parcel_button = button_at("拆开旅行包裹", Rect2(480, 17, 360, 37), func(): parcel_view.open())
+	parcel_button = button_at("拆开旅行包裹", Rect2(480, 17, 240, 37), func(): parcel_view.open())
+	mail_button = button_at("途中信箱", Rect2(730, 17, 140, 37), func(): life_panel.open("信箱"))
 	parcel_view = load("res://scripts/parcel_view.gd").new(self)
 	add_child(parcel_view)
 	settings_panel = load("res://scripts/settings_panel.gd").new(self)
@@ -397,8 +399,15 @@ func _process(delta: float) -> void:
 			letter_index = 0
 			notice.text = "门外传来脚步声——苔苔回家了，还带着一封信。"
 			tab = "旅途"
+		elif world.mail_arrivals > 0:
+			notice.text = "信箱里多了 %d 封途中来信，苔苔把沿途的小日子寄回来了。" % world.mail_arrivals
+		world.mail_arrivals = 0
 		if world.data.revision != previous_revision and life_panel.visible: life_panel.rebuild()
 		refresh()
+		var unread = 0
+		for entry in world.data.get("travel_mail", []):
+			if not entry.read: unread += 1
+		mail_button.text = "途中信箱 · %d" % unread if unread > 0 else "途中信箱"
 
 func qa_flow() -> void:
 	await get_tree().create_timer(0.5).timeout
@@ -503,8 +512,8 @@ func capture(path: String) -> void:
 	await RenderingServer.frame_post_draw
 	if DisplayServer.get_name() != "headless":
 		var image = get_viewport().get_texture().get_image()
-		var target = path if "g4-" in path or "g5-" in path or "g6-" in path or "g7-" in path or "g8-" in path or "g9-" in path or "g10-" in path else path.replace("artifacts/", "artifacts/g3-")
-		if path.begins_with("artifacts/g5-"): target = path.replace("artifacts/g5-", "artifacts/g10-regression-")
+		var target = path if "g4-" in path or "g5-" in path or "g6-" in path or "g7-" in path or "g8-" in path or "g9-" in path or "g10-" in path or "g11-" in path else path.replace("artifacts/", "artifacts/g3-")
+		if path.begins_with("artifacts/g5-"): target = path.replace("artifacts/g5-", "artifacts/g11-regression-")
 		var result = image.save_png(ProjectSettings.globalize_path("res://" + target))
 		assert(result == OK)
 
@@ -527,5 +536,7 @@ func activate_save(next) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST and world != null and not qa_mode:
 		world.persist()
+
+
 
 

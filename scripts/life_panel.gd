@@ -44,7 +44,7 @@ func _ready() -> void:
 	tabs.size = Vector2(1116, 44)
 	tabs.add_theme_constant_override("separation", 10)
 	add_child(tabs)
-	for title_text in ["田园", "厨房", "远行", "收藏", "衣橱", "小铺", "小屋", "照料", "记忆"]:
+	for title_text in ["田园", "厨房", "远行", "信箱", "收藏", "衣橱", "小铺", "小屋", "照料", "记忆"]:
 		var button = make_button(title_text, func(): open(title_text))
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tabs.add_child(button)
@@ -192,6 +192,7 @@ func rebuild() -> void:
 		"照料": care_page()
 		"记忆": memory_page()
 		"衣橱": wardrobe_page()
+		"信箱": mailbox_page()
 
 func garden_page() -> void:
 	var data = host.world.data
@@ -414,5 +415,21 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		hide()
 		get_viewport().set_input_as_handled()
 
+
+
+
+func mailbox_page() -> void:
+	line("把路上的小日子，寄回给你", true)
+	line("多城慢游途中可能寄来信件和明信片；寄出顺序跟随途经城市，每站每趟最多一封，偶尔也会没来得及寄。离线来信会保留。")
+	var mail = host.world.data.get("travel_mail", [])
+	if mail.is_empty():
+		line("信箱还安安静静的。等下一次长途远行，苔苔会把沿途见闻寄回来。")
+		return
+	var cards = grid(2)
+	for entry in mail:
+		var letter = entry
+		var title = ("未读 · " if not entry.read else "已读 · ") + host.world.Mail.city_name(entry.destination)
+		var date = Time.get_date_string_from_unix_time(int(entry.time))
+		tile(cards, entry.destination if entry.kind == "postcard" else "mail", title, "%s · 第%d次远行\n%s" % [date, entry.trip, "一张途中明信片" if entry.kind == "postcard" else "一封途中来信"], "展开阅读", func(): host.postcard_view.open_mail(letter); rebuild(), "mail_" + entry.id, false, entry.kind == "postcard")
 
 

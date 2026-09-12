@@ -1,4 +1,6 @@
 extends "res://scripts/reward_world.gd"
+const Mail = preload("res://scripts/travel_mail.gd")
+var mail_arrivals = 0
 ## Discovery is persisted with settlement; opening a parcel never grants loot twice.
 func fresh() -> Dictionary:
 	var value = super.fresh()
@@ -29,13 +31,26 @@ func rare_guarantee(destination: String) -> int:
 	return 3 if release_timing and destination in ["tokyo", "istanbul", "paris", "iceland"] else 8
 
 func advance(now: float) -> bool:
+	now = maxf(now, float(data.last_seen))
+	var schedule_needed = float(data.trip_end) > 0 and data.trip_snapshot.get("mail_route_version") != 2
+	var delivered = Mail.deliver(self, now)
+	mail_arrivals += delivered
 	if float(data.trip_end) > 0 and maxf(now, data.last_seen) >= float(data.trip_end) and data.trip_snapshot.get("incident") != "forgot":
 		var destination = str(data.active_event.destination)
 		data.rare_misses[destination] = 0 if data.trip_snapshot.get("rare", "") != "" else mini(7, int(data.rare_misses[destination]) + 1)
-	return super.advance(now)
+	var returned = super.advance(now)
+	if delivered > 0 or schedule_needed: persist()
+	return returned
 
 func command(action: String, payload: Dictionary = {}, now: float = -1, key: String = "") -> Dictionary:
 	if now < 0: now = clock()
+	if action == "read_mail":
+		for entry in data.get("travel_mail", []):
+			if entry.id == payload.get("id"):
+				entry.read = true
+				persist()
+				return {"ok": true, "message": "已收好这封途中来信。"}
+		return _fail("这封信还没有寄到。")
 	if action == "reveal_next":
 		advance(now)
 		if not key.is_empty() and key in data.processed: return _fail("这份包裹已经拆过啦。")
@@ -53,6 +68,7 @@ func command(action: String, payload: Dictionary = {}, now: float = -1, key: Str
 	return super.command(action, payload, now, key)
 
 func persist() -> bool:
+	Mail.prepare(self, float(data.last_seen))
 	# Do not spoil unopened discoveries through the journal or care history.
 	if data.has("pending_discoveries"):
 		for item in data.pending_discoveries:
@@ -94,4 +110,34 @@ func valid_save(value: Variant) -> bool:
 	for id in Content.ROUTES:
 		if not natural(value.rare_misses.get(id)) or value.rare_misses[id] > 7: return false
 	if value.trip_snapshot.has("snack") and not value.trip_snapshot.snack is bool: return false
+	var archive = value.get("travel_mail", [])
+	var schedule = value.trip_snapshot.get("mail_schedule", [])
+	if not archive is Array or archive.size() > 60 or not schedule is Array or schedule.size() > 8: return false
+	var ids = []
+	for entry in archive + schedule:
+		if not Mail.valid(entry, self) or entry.id in ids: return false
+		ids.append(entry.id)
+	var previous = -1.0
+	var cities = []
+	if value.trip_snapshot.get("mail_route_version") == 2:
+		var itinerary = value.trip_snapshot.get("mail_route")
+		if not itinerary is Array: return false
+		var destination = value.active_event.get("destination", "")
+		var expected = Mail.ROUTES.get(destination, [])
+		if destination == "iceland":
+			if itinerary not in [["shanghai", "dubai", "london", "stockholm"], ["shanghai", "dubai", "london", "copenhagen"]] and value.trip_snapshot.get("incident") != "forgot": return false
+		elif itinerary != expected and value.trip_snapshot.get("incident") != "forgot": return false
+		var index = -1
+		for entry in schedule:
+			var next_index = itinerary.find(entry.destination)
+			if next_index <= index or int(entry.trip) != int(value.trip_count) + 1: return false
+			index = next_index
+	for entry in schedule:
+		if float(entry.time) <= previous or float(entry.time) >= float(value.trip_end): return false
+		previous = float(entry.time)
+	for entry in archive + schedule:
+		if entry.destination in Mail.NAMES:
+			var key = str(int(entry.trip)) + ":" + entry.destination
+			if key in cities: return false
+			cities.append(key)
 	return true
