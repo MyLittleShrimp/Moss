@@ -1,0 +1,233 @@
+{
+  "music_01": {
+    "path": "res://assets/audio/music_01.ogg",
+    "title": "01｜把远方寄回家",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\01｜把远方寄回家.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_02": {
+    "path": "res://assets/audio/music_02.ogg",
+    "title": "02｜窗边有一块阳光",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\02｜窗边有一块阳光.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_03": {
+    "path": "res://assets/audio/music_03.ogg",
+    "title": "03｜香草慢慢长",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\03｜香草慢慢长.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_04": {
+    "path": "res://assets/audio/music_04.ogg",
+    "title": "04｜便当里装着晴天",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\04｜便当里装着晴天.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_05": {
+    "path": "res://assets/audio/music_05.ogg",
+    "title": "05｜今天适合听雨",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\05｜今天适合听雨.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_06": {
+    "path": "res://assets/audio/music_06.ogg",
+    "title": "06｜灯还为你留着",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\06｜灯还为你留着.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_07": {
+    "path": "res://assets/audio/music_07.ogg",
+    "title": "07｜翻到有风的那一页",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\07｜翻到有风的那一页.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_08": {
+    "path": "res://assets/audio/music_08.ogg",
+    "title": "08｜你说过你喜欢",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\08｜你说过你喜欢.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_09": {
+    "path": "res://assets/audio/music_09.ogg",
+    "title": "09｜围巾系好，出发",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\09｜围巾系好，出发.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_10": {
+    "path": "res://assets/audio/music_10.ogg",
+    "title": "10｜溪水把青石磨圆",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\10｜溪水把青石磨圆.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_11": {
+    "path": "res://assets/audio/music_11.ogg",
+    "title": "11｜集市有一杯热茶",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\11｜集市有一杯热茶.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_12": {
+    "path": "res://assets/audio/music_12.ogg",
+    "title": "12｜山坡借我一点风",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\12｜山坡借我一点风.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_13": {
+    "path": "res://assets/audio/music_13.ogg",
+    "title": "13｜西湖把云留住",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\13｜西湖把云留住.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_14": {
+    "path": "res://assets/audio/music_14.ogg",
+    "title": "14｜洱海边，慢一点",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\14｜洱海边，慢一点.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_15": {
+    "path": "res://assets/audio/music_15.ogg",
+    "title": "15｜东京的最后一班小雨",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\15｜东京的最后一班小雨.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_16": {
+    "path": "res://assets/audio/music_16.ogg",
+    "title": "16｜海峡那边也是黄昏",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\16｜海峡那边也是黄昏.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_17": {
+    "path": "res://assets/audio/music_17.ogg",
+    "title": "17｜巴黎街角，留一张空椅",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\17｜巴黎街角，留一张空椅.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_18": {
+    "path": "res://assets/audio/music_18.ogg",
+    "title": "18｜极光落进毛线帽",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\18｜极光落进毛线帽.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_19": {
+    "path": "res://assets/audio/music_19.ogg",
+    "title": "19｜从上海寄出的第一封信",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\19｜从上海寄出的第一封信.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_20": {
+    "path": "res://assets/audio/music_20.ogg",
+    "title": "20｜迪拜河上的金色折痕",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\20｜迪拜河上的金色折痕.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_21": {
+    "path": "res://assets/audio/music_21.ogg",
+    "title": "21｜伦敦的伞，借你一半",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\21｜伦敦的伞，借你一半.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_22": {
+    "path": "res://assets/audio/music_22.ogg",
+    "title": "22｜北方的房子像盒彩笔",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\22｜北方的房子像盒彩笔.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_23": {
+    "path": "res://assets/audio/music_23.ogg",
+    "title": "23｜邮戳上的一点想念",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\23｜邮戳上的一点想念.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "music_24": {
+    "path": "res://assets/audio/music_24.ogg",
+    "title": "24｜门开了，是你回来了",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\24｜门开了，是你回来了.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "main_theme": {
+    "path": "res://assets/audio/main_theme.ogg",
+    "title": "苔间小屋 主旋律 Main theme",
+    "source": "OST\\苔间小屋 OST：把远方寄回家\\苔间小屋 主旋律 Main theme.mp3",
+    "kind": "music",
+    "cue_seconds": null
+  },
+  "wind": {
+    "path": "res://assets/audio/wind.ogg",
+    "title": "风声",
+    "source": "SoundFX\\风声.mp3",
+    "kind": "ambient",
+    "cue_seconds": null
+  },
+  "forest": {
+    "path": "res://assets/audio/forest.ogg",
+    "title": "森林环境",
+    "source": "SoundFX\\森林环境.mp3",
+    "kind": "ambient",
+    "cue_seconds": null
+  },
+  "birds": {
+    "path": "res://assets/audio/birds.ogg",
+    "title": "森林田野鸟鸣",
+    "source": "SoundFX\\森林田野鸟鸣.mp3",
+    "kind": "ambient",
+    "cue_seconds": null
+  },
+  "stream": {
+    "path": "res://assets/audio/stream.ogg",
+    "title": "溪流",
+    "source": "SoundFX\\溪流.mp3",
+    "kind": "ambient",
+    "cue_seconds": null
+  },
+  "rain": {
+    "path": "res://assets/audio/rain.ogg",
+    "title": "雨声 小雨淅淅沥沥",
+    "source": "SoundFX\\雨声 小雨淅淅沥沥.mp3",
+    "kind": "ambient",
+    "cue_seconds": null
+  },
+  "mail": {
+    "path": "res://assets/audio/mail.ogg",
+    "title": "收到信",
+    "source": "SoundFX\\收到信.mp3",
+    "kind": "effect",
+    "cue_seconds": 4
+  },
+  "discover": {
+    "path": "res://assets/audio/discover.ogg",
+    "title": "揭晓收藏",
+    "source": "SoundFX\\揭晓收藏.mp3",
+    "kind": "effect",
+    "cue_seconds": 8
+  },
+  "welcome": {
+    "path": "res://assets/audio/welcome.ogg",
+    "title": "欢迎回家",
+    "source": "SoundFX\\欢迎回家.mp3",
+    "kind": "effect",
+    "cue_seconds": 10
+  }
+}

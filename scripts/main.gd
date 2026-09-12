@@ -18,6 +18,7 @@ const Dialogue = preload("res://scripts/local_dialogue.gd")
 const AIClient = preload("res://scripts/player_ai.gd")
 var save_library
 var settings_panel
+var audio_manager
 const Catalog = preload("res://scripts/travel_catalog.gd")
 const INK = Color("35483d")
 const MUTED = Color("768072")
@@ -86,9 +87,13 @@ func _ready() -> void:
 	add_child(parcel_view)
 	settings_panel = load("res://scripts/settings_panel.gd").new(self)
 	add_child(settings_panel)
+	audio_manager = load("res://scripts/game_audio.gd").new(self, "" if qa_mode else "user://audio-settings.cfg")
+	add_child(audio_manager)
 	button_at("设置 · 存档", Rect2(880, 17, 170, 37), func(): settings_panel.open())
 	refresh()
 	if "--smoke-test" in OS.get_cmdline_user_args():
+		assert(audio_manager.catalog.size() == 33)
+		assert(audio_manager.stream("main_theme").get_length() > 1)
 		assert(world.save_path.is_empty())
 		if "--expect-release" in OS.get_cmdline_user_args(): assert(world.release_timing)
 		if "--expect-development" in OS.get_cmdline_user_args(): assert(not world.release_timing)
@@ -536,7 +541,5 @@ func activate_save(next) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST and world != null and not qa_mode:
 		world.persist()
-
-
 
 

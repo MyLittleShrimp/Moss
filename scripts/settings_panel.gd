@@ -55,6 +55,7 @@ func _ready() -> void:
 	layout.add_child(tabs)
 	button(tabs, "我的 AI 模型", ai_page, "ai_tab")
 	button(tabs, "存档与搬家", saves_page, "save_tab")
+	button(tabs, "音乐与声音", audio_page, "audio_tab")
 	var scroll = ScrollContainer.new()
 	scroll.custom_minimum_size.y = 550
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -144,6 +145,56 @@ func ai_page() -> void:
 	button(row, "保存配置", save_ai, "save_ai")
 	button(row, "解锁已保存 Key", unlock_key, "unlock")
 	button(row, "测试连接", test_ai, "test_ai")
+
+func audio_page() -> void:
+	clear_body()
+	var audio = host.audio_manager
+	label("让小屋有一点声音。音乐、环境声和提示音可以分别调整，设置保存在本机，不影响存档。")
+	var mute = CheckBox.new()
+	mute.text = "静音所有声音"
+	mute.button_pressed = audio.muted
+	mute.toggled.connect(func(value): audio.muted = value; audio.apply_volumes())
+	body.add_child(mute)
+	actions.audio_mute = mute
+	for entry in [["master", "总音量"], ["music", "背景音乐"], ["ambient", "环境音"], ["effects", "事件提示音"]]:
+		var row = HBoxContainer.new()
+		body.add_child(row)
+		var name_label = Label.new()
+		name_label.text = entry[1]
+		name_label.custom_minimum_size.x = 150
+		row.add_child(name_label)
+		var slider = HSlider.new()
+		slider.min_value = 0
+		slider.max_value = 100
+		slider.step = 1
+		slider.value = audio.volumes[entry[0]] * 100
+		slider.custom_minimum_size = Vector2(500, 42)
+		row.add_child(slider)
+		var percent = Label.new()
+		percent.text = "%d%%" % slider.value
+		row.add_child(percent)
+		var volume_key = entry[0]
+		slider.value_changed.connect(func(value): audio.set_volume(volume_key, value / 100.0); percent.text = "%d%%" % value)
+		actions["audio_" + volume_key] = slider
+	label("主旋律：苔间小屋 主旋律 Main theme。场景停留片刻后柔和切换；短暂翻页不会反复切歌。")
+	var tracks = OptionButton.new()
+	for state in ["normal", "hover", "pressed", "focus"]:
+		tracks.add_theme_stylebox_override(state, host.box(Color("e7eadb"), 10))
+	tracks.add_theme_color_override("font_color", host.INK)
+	tracks.add_theme_color_override("font_hover_color", host.INK)
+	tracks.get_popup().add_theme_stylebox_override("panel", host.box(host.PAPER, 10))
+	tracks.get_popup().add_theme_color_override("font_color", host.INK)
+	var ids = ["main_theme"]
+	for i in range(1, 25): ids.append("music_%02d" % i)
+	for id in ids: tracks.add_item(str(audio.catalog[id].title))
+	tracks.custom_minimum_size.y = 42
+	body.add_child(tracks)
+	var controls = HBoxContainer.new()
+	body.add_child(controls)
+	button(controls, "试听选中曲目", func(): audio.preview(ids[tracks.selected]), "audio_preview")
+	button(controls, "恢复场景音乐", audio.resume_scene, "audio_resume")
+	button(controls, "试听来信提示", func(): audio.play_cue("mail"), "audio_cue")
+	button(controls, "保存声音设置", func(): feedback.text = "声音设置已保存。" if audio.save_settings() == OK else "保存失败，请检查本机目录权限。", "audio_save")
 
 func save_ai() -> void:
 	if host.home_interactions.book_loading: feedback.text = "请等小书生成结束再修改配置。"; return

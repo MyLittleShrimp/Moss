@@ -72,6 +72,7 @@ func reveal() -> void:
 	await tween.finished
 	var result = host.world.command("reveal_next")
 	if result.ok:
+		if host.audio_manager != null: host.audio_manager.play_cue("discover")
 		current = result.item
 		title.text = "新发现 · " + GameContent.ITEMS[current].name
 		picture.texture = Art.texture(current)

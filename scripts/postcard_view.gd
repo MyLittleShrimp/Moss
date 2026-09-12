@@ -11,6 +11,7 @@ var photo_button: Button
 var text_side: Control
 var large = false
 var letter_mode = false
+var audio_destination = ""
 func _init(owner_node) -> void:
 	host = owner_node
 func _ready() -> void:
@@ -66,6 +67,7 @@ func text(value: String, size: int) -> Label:
 	text_side.add_child(label)
 	return label
 func open(id: String) -> void:
+	audio_destination = id
 	letter_mode = false
 	close_button.text = "收回相册 ×"
 	var card = host.world.postcard_content(id)
@@ -95,6 +97,7 @@ func layout_card() -> void:
 	for node in get_children(): node.queue_redraw()
 
 func open_mail(entry: Dictionary) -> void:
+	audio_destination = entry.destination
 	if not host.world.command("read_mail", {"id": entry.id}).ok: return
 	letter_mode = entry.kind == "letter"
 	picture.texture = Art.postcard(entry.destination)
