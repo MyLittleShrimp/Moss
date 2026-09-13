@@ -13,6 +13,33 @@ var save_list: ItemList
 var slot_ids = []
 var file_dialog: FileDialog
 var actions = {}
+var model_choices: OptionButton
+var page_revision = 0
+
+func clear_model_choices(_value: String = "") -> void:
+	if not is_instance_valid(model_choices): return
+	model_choices.clear()
+	model_choices.add_item("获取模型列表后，在这里选择")
+	model_choices.disabled = true
+
+func refresh_models() -> void:
+	var revision = page_revision
+	var requested_url = url.text.strip_edges()
+	var requested_key = key.text.strip_edges()
+	feedback.text = "正在读取服务提供的模型列表…"
+	var result = await host.ai_client.list_models(requested_url, requested_key)
+	if revision != page_revision or not is_instance_valid(url) or url.text.strip_edges() != requested_url or key.text.strip_edges() != requested_key: return
+	clear_model_choices()
+	if result.ok:
+		model_choices.clear()
+		for id in result.models: model_choices.add_item(id)
+		model_choices.disabled = false
+		var selected = result.models.find(model_name.text)
+		if selected >= 0: model_choices.select(selected)
+		else:
+			model_choices.select(-1)
+			model_choices.text = "请选择模型（当前手填名称保留）"
+	feedback.text = result.message
 
 func _init(owner_node) -> void:
 	host = owner_node
@@ -111,6 +138,7 @@ func field(title: String, value: String = "", secret: bool = false) -> LineEdit:
 	return node
 
 func clear_body() -> void:
+	page_revision += 1
 	for node in body.get_children(): body.remove_child(node); node.queue_free()
 	feedback.text = ""
 
@@ -134,6 +162,23 @@ func ai_page() -> void:
 	model_name.placeholder_text = "填写服务商模型 ID，或 ollama list 中的模型名称"
 	key = field("API Key", host.ai_client.api_key, true)
 	key.placeholder_text = "本机 Ollama 通常留空；云端填写自己的 Key"
+	var model_row = HBoxContainer.new()
+	body.add_child(model_row)
+	model_choices = OptionButton.new()
+	model_choices.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	model_choices.custom_minimum_size.y = 38
+	model_choices.add_theme_stylebox_override("normal", host.box(Color("e7eadb"), 10))
+	model_choices.add_theme_color_override("font_color", host.INK)
+	model_choices.add_theme_stylebox_override("disabled", host.box(Color("e5e6df"), 10))
+	model_choices.add_theme_color_override("font_disabled_color", host.MUTED)
+	model_choices.get_popup().add_theme_stylebox_override("panel", host.box(host.PAPER))
+	model_choices.get_popup().add_theme_color_override("font_color", host.INK)
+	model_row.add_child(model_choices)
+	clear_model_choices()
+	model_choices.item_selected.connect(func(index): model_name.text = model_choices.get_item_text(index))
+	button(model_row, "获取 / 刷新模型列表", refresh_models, "fetch_models")
+	url.text_changed.connect(clear_model_choices)
+	key.text_changed.connect(clear_model_choices)
 	remember = CheckBox.new()
 	remember.text = "在本机加密保存 Key（下次启动需口令解锁）"
 	body.add_child(remember)
@@ -216,6 +261,8 @@ func test_ai() -> void:
 	feedback.text = "正在测试，首次加载本机模型可能较慢…"
 	var result = await host.ai_client.test_connection()
 	feedback.text = "连接成功，模型返回了有效问候。" if result.ok else host.ai_client.status_text
+	if result.ok and visible and is_instance_valid(url) and not url.text.begins_with("https://api.deepseek.com/"):
+		await refresh_models()
 
 func saves_page() -> void:
 	clear_body()

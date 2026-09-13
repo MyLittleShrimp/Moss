@@ -28,7 +28,7 @@ func qa_flow() -> void:
 	world.data.foods.potato_box = 10
 	life_panel.open("远行")
 	await qa_click(life_panel.actions.route_iceland)
-	await qa_click(life_panel.actions.food_potato_box)
+	life_panel.actions.count_potato_box.value = 4
 	await qa_click(life_panel.actions.snack)
 	world.rng.seed = 2
 	world.data.rare_misses.iceland = 7

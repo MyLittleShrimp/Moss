@@ -17,8 +17,8 @@ func qa_flow() -> void:
 	await capture("artifacts/g6-kitchen.png")
 	life_panel.open("远行")
 	await qa_click(life_panel.actions.route_istanbul)
-	await qa_click(life_panel.actions.food_feast)
-	assert(life_panel.destination == "istanbul" and life_panel.food == "feast")
+	life_panel.actions.count_feast.value = 1
+	assert(life_panel.destination == "istanbul" and life_panel.provisions.get("feast") == 1)
 	life_panel.scroll.scroll_vertical = 0
 	await capture("artifacts/g6-routes.png")
 	world.give("stone")
@@ -29,8 +29,9 @@ func qa_flow() -> void:
 	assert(world.data.coins == 72)
 	await qa_click(life_panel.actions.buy_flower)
 	assert(world.data.plant_style == "flower" and "plant" in world.data.equipped)
-	await qa_click(life_panel.actions.buy_meadow)
-	assert(world.data.rug == "meadow" and world.data.coins == 46)
+	life_panel.open("小屋")
+	await qa_click(life_panel.actions.rug_meadow)
+	assert(world.data.rug == "meadow" and world.data.coins == 60)
 	await capture("artifacts/g6-shop.png")
 	life_panel.hide()
 	refresh()

@@ -67,7 +67,8 @@ func advance(now: float) -> bool:
 			if destination not in data.postcards: data.postcards.append(destination)
 		else:
 			# Unused food returns; no destination reward or postcard for an aborted trip.
-			data.foods[trip.food] += int(trip.portions)
+			var packed = trip.get("provisions", {str(trip.food): int(trip.portions)})
+			for id in packed: data.foods[id] += int(packed[id])
 			if trip.get("snack", false): data.foods.berry_snack += 1
 			rewards.append("未用的食物已放回厨房")
 		data.letters.push_front({"text": event.text, "title": event.title, "destination": event.destination,
@@ -124,18 +125,13 @@ func command(action: String, payload: Dictionary = {}, now: float = -1.0, key: S
 			message = Content.FOODS[food].name + "做好了。"
 		"travel":
 			var destination = str(payload.get("destination", "creek"))
-			var food = str(payload.get("food", "herb_box"))
-			if not Content.ROUTES.has(destination) or not Content.FOODS.has(food): return _fail("行程或食物不存在。")
-			if Content.FOODS[food].get("snack", false): return _fail("点心不能代替主便当。")
-			if not payload.get("snack", false) is bool: return _fail("点心选项无效。")
+			var check = travel_check(destination, payload)
+			if not check.ok: return _fail(check.message)
+			var packed = check.provisions
+			var food = str(packed.keys()[0])
+			var portions = int(packed[food])
 			var snack = bool(payload.get("snack", false))
-			if snack and data.foods.berry_snack < 1: return _fail("还没有草莓点心包。")
-			if float(data.trip_end) > 0: return _fail("苔苔已经在路上了。")
-			if data.condition != "well": return _fail("苔苔想先休息一会儿。陪伴或照料后再出门吧。")
 			var route = Content.ROUTES[destination]
-			var portions = Content.portions(destination, food)
-			if Content.FOODS[food].tier < route.tier: return _fail("远途需要更耐放的便当，请换一种食物。")
-			if data.foods[food] < portions: return _fail("这段旅程需要%s × %d。" % [Content.FOODS[food].name, portions])
 			var incident = Content.incident(rng.randf())
 			var actual = destination
 			if incident == "friend":
@@ -149,17 +145,17 @@ func command(action: String, payload: Dictionary = {}, now: float = -1.0, key: S
 			elif data.pace == "demo": duration /= 60.0
 			var actual_route = Content.ROUTES[actual]
 			var rare = roll_rare(actual)
-			data.foods[food] -= portions
+			for id in packed: data.foods[id] -= int(packed[id])
 			if snack: data.foods.berry_snack -= 1
 			data.trip_end = now + duration
 			data.trip_rain = data.rain_preference == "like"
 			data.trip_snapshot = {"planned": destination, "incident": incident, "common": actual_route.common,
-				"rare": rare, "food": food, "portions": portions, "pace": data.pace,
+				"rare": rare, "food": food, "portions": portions, "provisions": packed.duplicate(true), "pace": data.pace,
 				"recovery_seconds": 20 if data.pace == "demo" else 600, "snack": snack}
 			data.active_event = {"id": "g5_" + actual + "_" + incident, "destination": actual,
 				"title": Content.INCIDENTS[incident], "text": story(actual, incident)}
 			if snack and incident != "forgot" and rng.randf() < 0.35: data.active_event.text += "路边的小鸟闻到了草莓香，我分给它一点点心，它陪我走过了一小段路。"
-			message = "苔苔背着%s × %d出发了。归期未定，关掉游戏旅程也会继续。" % [Content.FOODS[food].name, portions]
+			message = "苔苔背着" + provisions_text(packed) + "出发了。归期未定，关掉游戏旅程也会继续。"
 		"sell":
 			var item = str(payload.get("item", ""))
 			if not Content.ITEMS.has(item) or int(data.items.get(item, 0)) <= 1: return _fail("只兑换重复收藏，第一件会留下。")
@@ -232,6 +228,33 @@ func command(action: String, payload: Dictionary = {}, now: float = -1.0, key: S
 	_event(message, now)
 	persist()
 	return {"ok": true, "message": message, "revision": data.revision}
+
+func provisions_text(packed: Dictionary) -> String:
+	var parts: Array[String] = []
+	for id in packed: parts.append("%s × %d" % [Content.FOODS[id].name, packed[id]])
+	return "、".join(parts)
+
+func travel_check(destination: String, payload: Dictionary) -> Dictionary:
+	if not Content.ROUTES.has(destination): return _fail("请选择目的地。")
+	var packed = payload.get("provisions", null)
+	if not payload.has("provisions"):
+		var food = str(payload.get("food", "herb_box"))
+		if not Content.FOODS.has(food): return _fail("行程或食物不存在。")
+		packed = {food: Content.portions(destination, food)}
+	if not packed is Dictionary or packed.is_empty(): return _fail("请用下方计数器装入便当。")
+	var total = 0
+	for id in packed:
+		if not Content.FOODS.has(id) or Content.FOODS[id].get("snack", false): return _fail("点心不能代替主便当。")
+		if not natural(packed[id]) or packed[id] < 1 or packed[id] > 10000: return _fail("便当数量需为1–10000之间的整数。")
+		if Content.FOODS[id].tier < Content.ROUTES[destination].tier: return _fail(Content.FOODS[id].name + "耐放等级不足。")
+		if data.foods[id] < packed[id]: return _fail(Content.FOODS[id].name + "库存不足。")
+		total += int(packed[id]) * int(Content.FOODS[id].nutrition)
+	if not payload.get("snack", false) is bool: return _fail("点心选项无效。")
+	if payload.get("snack", false) and data.foods.berry_snack < 1: return _fail("还没有草莓点心包。")
+	if data.trip_end > 0: return _fail("苔苔已经在路上了。")
+	if data.condition != "well": return _fail("苔苔想先休息一会儿。")
+	if total < Content.ROUTES[destination].supply: return _fail("补给不足：%d / %d。" % [total, Content.ROUTES[destination].supply])
+	return {"ok":true, "message":"行囊准备好了", "provisions":packed, "supply":total}
 
 func roll_rare(destination: String) -> String:
 	var route = Content.ROUTES[destination]
@@ -313,6 +336,15 @@ func valid_save(value: Variant) -> bool:
 			if not Content.ROUTES.has(trip.get("planned")) or not Content.INCIDENTS.has(trip.get("incident")) or not Content.FOODS.has(trip.get("food")): return false
 			if not natural(trip.get("portions")) or not Content.ITEMS.has(trip.get("common")) or (trip.get("rare") != "" and not Content.ITEMS.has(trip.get("rare"))): return false
 			if not numeric(trip.get("recovery_seconds")): return false
+			if trip.has("provisions"):
+				if not trip.provisions is Dictionary or trip.provisions.is_empty(): return false
+				var supply = 0
+				for id in trip.provisions:
+					if not Content.FOODS.has(id) or Content.FOODS[id].get("snack", false): return false
+					if not natural(trip.provisions[id]) or trip.provisions[id] < 1 or trip.provisions[id] > 10000: return false
+					if Content.FOODS[id].tier < Content.ROUTES[trip.planned].tier: return false
+					supply += int(trip.provisions[id]) * int(Content.FOODS[id].nutrition)
+				if supply < Content.ROUTES[trip.planned].supply: return false
 	return value.placed is bool and value.trip_rain is bool and value.name is String and value.memory_source is String and value.rain_preference in ["like", "dislike", "unknown"]
 
 func numeric(value: Variant) -> bool:

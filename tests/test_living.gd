@@ -24,9 +24,9 @@ func _initialize() -> void:
 	check(world.command("home_buy", {"kind": "plant", "item": "flower"}, 100, "flower").ok and world.data.coins == 48 and world.data.plant_style == "flower", "flower purchase has exact debit and equips")
 	check(not world.command("home_buy", {"kind": "plant", "item": "flower"}, 100, "flower").ok and world.data.coins == 48, "duplicate purchase key cannot charge")
 	check(world.command("plant_style", {"item": "leaf"}, 100).ok and world.data.plant_style == "leaf", "switch back to owned plant")
-	check(world.command("home_buy", {"kind": "rug", "item": "meadow"}, 100).ok and world.data.coins == 34, "rug purchase debit")
+	check(world.command("rug", {"item": "meadow"}, 100).ok and world.data.coins == 48, "starter rug free to equip")
 	check(world.command("rug", {"item": "woven"}, 100).ok, "switch rug back")
-	check(not world.command("rug", {"item": "sunset"}, 100).ok, "cannot equip unowned rug")
+	check(world.command("rug", {"item": "sunset"}, 100).ok, "second starter rug available")
 	world.data.coins = 0
 	check(not world.command("home_buy", {"kind": "rug", "item": "sunset"}, 100).ok and world.data.coins == 0, "insufficient balance untouched")
 	check(world.command("read_book", {"page": 2}, 100).ok and world.data.book_page == 2, "book page persisted")

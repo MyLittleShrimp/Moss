@@ -34,7 +34,7 @@ func qa_flow() -> void:
 	life_panel.open("远行")
 	await qa_click(life_panel.actions.route_iceland)
 	await hold_until(15.5)
-	await qa_click(life_panel.actions.food_potato_box)
+	life_panel.actions.count_potato_box.value = 4
 	await hold_until(17)
 	# Select a reproducible journey with a Shanghai postcard, using game rules.
 	for seed_value in range(200):

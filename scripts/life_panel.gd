@@ -8,6 +8,10 @@ var page = "田园"
 var crop = "herb"
 var destination = "creek"
 var food = "herb_box"
+var provisions = {}
+var pinned: VBoxContainer
+var departure_summary: Label
+var departure_button: Button
 var bring_snack = false
 var body: VBoxContainer
 var feedback: Label
@@ -58,6 +62,10 @@ func _ready() -> void:
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 12)
 	scroll.add_child(body)
+	pinned = VBoxContainer.new()
+	pinned.position = Vector2(161, 221)
+	pinned.size = Vector2(1116, 84)
+	add_child(pinned)
 	feedback = Label.new()
 	feedback.position = Vector2(161, 757)
 	feedback.size = Vector2(1116, 48)
@@ -98,6 +106,7 @@ func action(text: String, verb: String, payload: Dictionary, id: String = "") ->
 
 func execute(verb: String, payload: Dictionary) -> void:
 	host.act(verb, payload)
+	if verb == "travel" and host.world.data.trip_end > 0: provisions.clear(); bring_snack = false
 	feedback.text = host.notice.text
 	rebuild()
 
@@ -182,6 +191,10 @@ func rebuild() -> void:
 		body.remove_child(child)
 		child.queue_free()
 	actions.clear()
+	for child in pinned.get_children(): pinned.remove_child(child); child.queue_free()
+	pinned.hide()
+	scroll.position.y = 221
+	scroll.size.y = 520
 	match page:
 		"田园": garden_page()
 		"厨房": kitchen_page()
@@ -211,45 +224,133 @@ func garden_page() -> void:
 		var info = "空田 · 等你播种" if end == 0 else ("慢慢长大 · 约 %d 秒" % ceili(end - host.world.clock()) if growing else "成熟了 · 可以收获")
 		command_tile(plots, crop_id, "田地 %d · %s" % [i + 1, Content.CROPS[crop_id].name], info, "种下" + Content.CROPS[crop_id].name if end == 0 else ("看看生长情况" if growing else "收获这一份开心"), "garden", {"plot": i, "crop": crop}, "plot" + str(i))
 
+func ready_button(button: Button) -> void:
+	button.add_theme_stylebox_override("normal", host.box(host.GREEN))
+	button.add_theme_stylebox_override("hover", host.box(Color("6e895d")))
+	button.add_theme_color_override("font_color", host.PAPER)
+	button.add_theme_color_override("font_hover_color", host.PAPER)
+
 func kitchen_page() -> void:
 	var data = host.world.data
-	line("今天，给行囊装点什么？", true)
-	var stock: Array[String] = []
-	for id in Content.CROPS: stock.append("%s %d" % [Content.CROPS[id].name, data.ingredients[id]])
-	line("食材篮  ·  " + "    /    ".join(stock))
+	pinned.show()
+	pinned.position.y = 221
+	scroll.position.y = 307
+	scroll.size.y = 434
+	var basket = GridContainer.new()
+	basket.columns = 4
+	pinned.add_child(basket)
+	for id in Content.CROPS:
+		var cell = HBoxContainer.new()
+		cell.custom_minimum_size.x = 274
+		basket.add_child(cell)
+		picture(cell, Art.texture(id), 32)
+		text_node(cell, "%s  × %d" % [Content.CROPS[id].name, data.ingredients[id]], 17)
 	var recipes = grid(2)
 	for id in Content.FOODS:
 		var meal = Content.FOODS[id]
-		command_tile(recipes, id, meal.name + "   × " + str(data.foods[id]), "需要 " + Content.recipe_text(id) + "\n补给 %d · 耐放 %d 级" % [meal.nutrition, meal.tier], "做一份 · " + meal.name, "cook", {"food": id}, id)
+		var enough = true
+		var parts: Array[String] = []
+		for ingredient in meal.recipe:
+			if data.ingredients[ingredient] < meal.recipe[ingredient]: enough = false
+			parts.append("%s %d/%d" % [Content.CROPS[ingredient].name, data.ingredients[ingredient], meal.recipe[ingredient]])
+		command_tile(recipes, id, "%s   × %d" % [meal.name, data.foods[id]], "现有/需要：" + " · ".join(parts) + "\n补给 %d · 耐放 %d 级" % [meal.nutrition, meal.tier], "做一份 · " + meal.name if enough else "食材不足", "cook", {"food": id}, id)
+		actions[id].disabled = not enough
+		if enough: ready_button(actions[id])
+
+func select_destination(id: String) -> void:
+	destination = id
+	for food_id in provisions.keys():
+		if Content.FOODS[food_id].tier < Content.ROUTES[id].tier: provisions.erase(food_id)
+	rebuild()
+
+func update_provisions(id: String, quantity: float) -> void:
+	if quantity > 0: provisions[id] = int(quantity)
+	else: provisions.erase(id)
+	update_departure()
+
+func update_departure() -> void:
+	var total = 0
+	for id in provisions: total += int(provisions[id]) * int(Content.FOODS[id].nutrition)
+	var route = Content.ROUTES[destination]
+	var check = host.world.travel_check(destination, {"provisions":provisions, "snack":bring_snack})
+	departure_summary.text = "%s  ·  耐放 ≥ %d 级  ·  补给 %d / %d%s" % [route.name, route.tier, total, route.supply, "  ·  已备齐" if check.ok else "  ·  " + check.message]
+	departure_button.text = "装好行囊，出发 →" if host.world.data.trip_end == 0 else "苔苔在旅途中 · 归期未定"
+	departure_button.disabled = not check.ok
 
 func journey_page() -> void:
 	var data = host.world.data
+	for id in provisions.keys():
+		provisions[id] = mini(int(provisions[id]), int(data.foods[id]))
+		if provisions[id] == 0 or Content.FOODS[id].tier < Content.ROUTES[destination].tier: provisions.erase(id)
+	if data.foods.berry_snack < 1: bring_snack = false
 	line("下一封信，会从哪里寄来？", true)
 	var routes = grid(3)
 	for id in Content.ROUTES:
 		var route_id = id
 		var detail = Content.ROUTES[id]
-		tile(routes, id, detail.name, "%s\n补给 %d · 耐放 %d 级" % [host.world.Timing.HINTS[id] if host.world.release_timing else detail.hint, detail.supply, detail.tier], "✓ 想去这里" if destination == id else "选这个目的地", func(): destination = route_id; rebuild(), "route_" + id, destination == id, true)
-	line("搭配便当  ·  远方需要更充足的准备")
-	var meals = grid(4)
+		tile(routes, id, detail.name, "%s\n补给 %d · 耐放 %d 级" % [host.world.Timing.HINTS[id] if host.world.release_timing else detail.hint, detail.supply, detail.tier], "✓ 想去这里" if destination == id else "选这个目的地", func(): select_destination(route_id), "route_" + id, destination == id, true)
+	line("自由搭配便当 · 每份均需达到耐放等级，补给相加；多带的食物也会消耗。")
+	var meals = grid(3)
 	for id in Content.FOODS:
+		var meal = Content.FOODS[id]
+		if meal.get("snack", false): continue
+		var eligible = meal.tier >= Content.ROUTES[destination].tier
+		var column = tile(meals, id, meal.name, "库存 %d · 每份补给 %d · 耐放 %d 级%s" % [data.foods[id], meal.nutrition, meal.tier, "\n耐放不足，不能携带" if not eligible else ""], "", Callable(), "", int(provisions.get(id,0)) > 0)
+		var counter = SpinBox.new()
+		counter.min_value = 0
+		counter.max_value = mini(10000, int(data.foods[id])) if eligible and data.trip_end == 0 else 0
+		counter.step = 1
+		counter.value = provisions.get(id, 0)
+		counter.editable = eligible and data.foods[id] > 0 and data.trip_end == 0
+		counter.get_line_edit().add_theme_stylebox_override("normal", host.box(Color("edf0e4"), 8))
+		counter.get_line_edit().add_theme_color_override("font_color", host.INK)
+		counter.get_line_edit().add_theme_color_override("font_uneditable_color", host.MUTED)
+		counter.suffix = "份"
+		counter.custom_minimum_size.y = 42
+		var counting = HBoxContainer.new()
+		column.add_child(counting)
+		var minus = make_button("−", func(): counter.value -= 1)
+		minus.custom_minimum_size = Vector2(42,42)
+		counting.add_child(minus)
+		counter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		counting.add_child(counter)
+		var plus = make_button("＋", func(): counter.value += 1)
+		plus.custom_minimum_size = Vector2(42,42)
+		counting.add_child(plus)
+		minus.disabled = not counter.editable or counter.value == 0
+		plus.disabled = not counter.editable or counter.value >= counter.max_value
+		counter.value_changed.connect(func(value): minus.disabled = not counter.editable or value == 0; plus.disabled = not counter.editable or value >= counter.max_value)
+		counter.get_line_edit().add_theme_stylebox_override("read_only", host.box(Color("e3e4dd"), 8))
+		counter.get_line_edit().alignment = HORIZONTAL_ALIGNMENT_CENTER
+		if not eligible or data.foods[id] == 0: column.modulate = Color("a6aaa2")
 		var meal_id = id
-		if Content.FOODS[id].get("snack", false): continue
-		tile(meals, id, Content.FOODS[id].name, "库存 %d · 这趟需 %d" % [data.foods[id], Content.portions(destination, id)], "✓ 放进行囊" if food == id else "选择便当", func(): food = meal_id; rebuild(), "food_" + id, food == id)
+		counter.value_changed.connect(func(value): update_provisions(meal_id, value))
+		actions["count_" + id] = counter
+	var snack = make_button(("✓ " if bring_snack else "+ ") + "额外带一包草莓点心（库存 %d）" % data.foods.berry_snack, func(): bring_snack = not bring_snack; rebuild())
+	snack.disabled = data.foods.berry_snack < 1 or data.trip_end > 0
+	body.add_child(snack)
+	actions.snack = snack
+	line("点心不替代主食。首次到访有机会发现隐藏收藏，折返时食物完整退回。")
 	var detail = Content.ROUTES[destination]
-	var requirement = "带上%s × %d，去%s" % [Content.FOODS[food].name, Content.portions(destination, food), detail.name]
-	var snack_button = make_button(("✓ " if bring_snack else "＋ ") + "额外带一包草莓点心（库存 %d）" % data.foods.berry_snack, func(): bring_snack = not bring_snack; rebuild())
-	body.add_child(snack_button)
-	actions.snack = snack_button
-	line("点心不替代主食，有机会分享给路上的朋友；折返时完整退回。")
-	action(requirement if data.trip_end == 0 else "苔苔在路上 · 归期未定", "travel", {"destination": destination, "food": food, "snack": bring_snack}).disabled = data.trip_end > 0
 	line("当地回忆：%s · 隐藏收藏：%s" % [Content.ITEMS[detail.common].name if host.world.discovered(detail.common) else "未发现的纪念品", Content.ITEMS[detail.rare].name if host.world.discovered(detail.rare) else "神秘包裹 ?"])
-	line("连续未发现会提高机会；此地最迟第%d次成功到访获得隐藏收藏。折返不计，绕路按实际到访地计。" % host.world.rare_guarantee(destination))
-	for outfit in Rewards.OUTFITS.values():
-		if outfit.route == destination: line("旅行装扮目标：" + (outfit.name if host.world.discovered(outfit.item) else "一份神秘衣饰，等发现后再揭晓"))
+	line("此地最迟第%d次成功到访获得隐藏收藏；折返不计，绕路按实际到访地计。" % host.world.rare_guarantee(destination))
 	for item in Rewards.ROOM_REWARDS:
 		if item in [detail.common, detail.rare]: line("小屋纪念奖励：" + (Rewards.ROOM_REWARDS[item].name if host.world.discovered(item) else "一件来自这里的神秘布置"))
-	if not host.world.release_timing: action("节奏：%s · 点此切换（仅影响下次播种和出发）" % ("正常生活" if data.pace == "normal" else "体验加速"), "pace", {"pace": "demo" if data.pace == "normal" else "normal"})
+	for outfit in Rewards.OUTFITS.values():
+		if outfit.route == destination: line("旅行装扮目标：" + (outfit.name if host.world.discovered(outfit.item) else "一份神秘衣饰，等发现后再揭晓"))
+	if not host.world.release_timing:
+		action("节奏：" + ("体验加速" if data.pace == "demo" else "正常生活") + " · 点击切换", "pace", {"pace":"normal" if data.pace == "demo" else "demo"}, "pace")
+	pinned.position.y = 657
+	pinned.show()
+	scroll.size.y = 422
+	departure_summary = text_node(pinned, "", 18)
+	departure_button = make_button("", func(): execute("travel", {"destination":destination, "provisions":provisions.duplicate(true), "snack":bring_snack}))
+	departure_button.custom_minimum_size.y = 50
+	departure_button.add_theme_font_size_override("font_size", 22)
+	ready_button(departure_button)
+	pinned.add_child(departure_button)
+	actions.travel = departure_button
+	update_departure()
 
 func collection_page() -> void:
 	var data = host.world.data
@@ -357,11 +458,16 @@ func home_page() -> void:
 	if "plant" in data.equipped: action("收起盆栽 · 留一点空白", "decorate", {"item": "plant"}, "hide_plant")
 	var plants = grid(3)
 	for id in data.plant_styles: command_tile(plants, Home.PLANTS[id].art, Home.PLANTS[id].name, "摆在" + Home.SPOTS[data.plant_spot], "✓ 正在摆放" if data.plant_style == id and "plant" in data.equipped else "换这盆植物", "plant_style", {"item": id}, "plant_" + id)
+	for id in data.plant_styles:
+		actions["plant_" + id].disabled = "plant" not in data.decorations
+		if "plant" not in data.decorations: actions["plant_" + id].text = "先在小铺带回一盆植物"
 	command_tile(plants, "stone", "窗台上的青石", "一段溪边的回忆", "已经安放" if data.placed else "摆上窗台", "place", {}, "place")
 	line("地毯与装饰")
 	var furniture = grid(3)
 	for id in data.rugs: command_tile(furniture, id, Home.RUGS[id].name, "柔软地留住脚步", "✓ 已铺好" if data.rug == id else "铺上这张地毯", "rug", {"item": id}, "rug_" + id)
-	for id in data.decorations: command_tile(furniture, id, Content.DECOR[id].name, "随时收起或再摆出来", "收起" if id in data.equipped else "摆放", "decorate", {"item": id}, id)
+	for id in data.decorations:
+		if id == "plant": continue # The plant style and placement above control this same object.
+		command_tile(furniture, id, Content.DECOR[id].name, "随时收起或再摆出来", "收起" if id in data.equipped else "摆放", "decorate", {"item": id}, id)
 	for id in data.themes: action(("✓ " if id == data.theme else "换上") + Content.THEMES[id], "theme", {"item": id}, id)
 
 func care_page() -> void:

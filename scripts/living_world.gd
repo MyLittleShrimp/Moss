@@ -10,7 +10,7 @@ func fresh() -> Dictionary:
 	var value = super.fresh()
 	value.schema = 4
 	value.merge({"plant_styles": ["leaf"], "plant_style": "leaf", "plant_spot": "window",
-		"rugs": ["woven"], "rug": "woven", "book_page": 0, "cleanliness": 100,
+		"rugs": ["woven", "meadow", "sunset"], "rug": "woven", "book_page": 0, "cleanliness": 100,
 		"last_sweep": 0.0, "dust_tick": 0.0, "weather": {"kind": "sunny", "humidity": 52, "slot": -1}})
 	return value
 
@@ -27,6 +27,8 @@ func advance(now: float) -> bool:
 	var returned = super.advance(now)
 	now = maxf(now, float(data.last_seen))
 	var changed = false
+	for id in ["meadow", "sunset"]:
+		if id not in data.rugs: data.rugs.append(id); changed = true
 	var weather = weather_at(now)
 	if data.weather.slot != weather.slot:
 		data.weather = weather

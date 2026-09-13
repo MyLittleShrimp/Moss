@@ -10,6 +10,48 @@ var model = ""
 var api_key = ""
 var timeout_seconds = 90.0
 var generation = 0
+var models_busy = false
+
+func parse_models(value: Variant) -> Array[String]:
+	var names: Array[String] = []
+	if not value is Dictionary: return names
+	var rows = value.get("data", value.get("models", []))
+	if not rows is Array: return names
+	for row in rows:
+		if not row is Dictionary: continue
+		var id = row.get("id", row.get("name", ""))
+		if not id is String or id.strip_edges().is_empty() or id.length() > 150 or "\n" in id or "\r" in id: continue
+		if id not in names: names.append(id)
+		if names.size() >= 200: break
+	names.sort()
+	return names
+
+func list_models(url: String, key: String) -> Dictionary:
+	var problem = validation(url, "list-models")
+	if not problem.is_empty(): return {"ok":false, "message":problem}
+	if "\n" in key or "\r" in key: return {"ok":false, "message":"密钥不能包含换行。"}
+	if models_busy: return {"ok":false, "message":"正在读取模型列表。"}
+	models_busy = true
+	var request = HTTPRequest.new()
+	request.timeout = 15
+	request.body_size_limit = 262144
+	request.max_redirects = 0
+	add_child(request)
+	var headers = PackedStringArray()
+	if not key.is_empty(): headers.append("Authorization: Bearer " + key)
+	var error = request.request(url.trim_suffix("/chat/completions") + "/models", headers)
+	if error != OK:
+		request.queue_free(); models_busy = false
+		return {"ok":false, "message":"无法连接模型目录，可手动填写模型名称。"}
+	var response = await request.request_completed
+	request.queue_free()
+	models_busy = false
+	if response[0] != HTTPRequest.RESULT_SUCCESS or response[1] != 200:
+		return {"ok":false, "message":"模型列表读取失败（HTTP %d），可手动填写；请检查服务、地址和Key。" % response[1]}
+	var parser = JSON.new()
+	if parser.parse(response[3].get_string_from_utf8()) != OK: return {"ok":false, "message":"模型列表格式不兼容，可手动填写。"}
+	var names = parse_models(parser.data)
+	return {"ok":not names.is_empty(), "models":names, "message":"找到 %d 个模型，请选择后保存配置。" % names.size() if not names.is_empty() else "服务未返回模型，请先安装模型或手动填写。"}
 const INSTRUCTIONS = "你是原创青蛙苔苔，温柔、好奇，用中文回答1至3句、不超过240字。输入facts是游戏事实，text是用户内容。不能假装执行操作、发奖励、改变记忆、发起旅行或编造共同经历；没有工具权限。不要用内疚话术催促玩家。只返回JSON对象，包含utterance非空字符串和emotion（calm、happy、curious之一）。"
 
 func load_settings() -> void:

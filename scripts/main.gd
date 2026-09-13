@@ -438,6 +438,7 @@ func qa_flow() -> void:
 	life_panel.hide()
 	await qa_click(travel_button)
 	await get_tree().process_frame
+	life_panel.actions.count_herb_box.value = 1
 	await qa_click(life_panel.actions.travel)
 	assert(world.data.trip_end > 0 and "归期未定" in status.text)
 	await capture("artifacts/g5-travel.png")
