@@ -330,16 +330,19 @@ func journey_page() -> void:
 	snack.disabled = data.foods.berry_snack < 1 or data.trip_end > 0
 	body.add_child(snack)
 	actions.snack = snack
-	line("点心不替代主食。首次到访有机会发现隐藏收藏，折返时食物完整退回。")
+	line("草莓点心：本次稀有概率增加 15 个百分点（最高 100%），每趟限一包。点心不替代主食；折返完整退回。")
 	var detail = Content.ROUTES[destination]
 	line("当地回忆：%s · 隐藏收藏：%s" % [Content.ITEMS[detail.common].name if host.world.discovered(detail.common) else "未发现的纪念品", Content.ITEMS[detail.rare].name if host.world.discovered(detail.rare) else "神秘包裹 ?"])
 	line("此地最迟第%d次成功到访获得隐藏收藏；折返不计，绕路按实际到访地计。" % host.world.rare_guarantee(destination))
+	if destination in Content.LONG_ROUTES:
+		line("长旅旅册：已积累 %d 页，每次非折返完成行程添一页、得 %d 叶币；每 3 页完成一册，额外得 6 叶币。" % [data.get("travel_progress", {}).get(destination, 0), Content.PROGRESS_COINS[destination]])
+		line("途中至少一封来信，正常长旅连续无消息不超过两天。忘带东西会提前折返，食物原样带回。")
 	for item in Rewards.ROOM_REWARDS:
 		if item in [detail.common, detail.rare]: line("小屋纪念奖励：" + (Rewards.ROOM_REWARDS[item].name if host.world.discovered(item) else "一件来自这里的神秘布置"))
 	for outfit in Rewards.OUTFITS.values():
 		if outfit.route == destination: line("旅行装扮目标：" + (outfit.name if host.world.discovered(outfit.item) else "一份神秘衣饰，等发现后再揭晓"))
 	if not host.world.release_timing:
-		action("节奏：" + ("体验加速" if data.pace == "demo" else "正常生活") + " · 点击切换", "pace", {"pace":"normal" if data.pace == "demo" else "demo"}, "pace")
+		action("节奏：" + {"normal":"正常测试", "demo":"体验加速", "balanced":"正式节奏 ×60"}[data.pace] + " · 点击切换（仅新播种／出发）", "pace", {"pace":{"normal":"demo", "demo":"balanced", "balanced":"normal"}[data.pace]}, "pace")
 	pinned.position.y = 657
 	pinned.show()
 	scroll.size.y = 422
@@ -368,6 +371,9 @@ func collection_page() -> void:
 		var unlocked = id in data.postcards
 		var destination_id = id
 		var column = tile(collection, id if unlocked else "unknown", route.name, "已到访 · 一封远方的信" if unlocked else "明信片尚未寄到", "展开明信片 ↗" if unlocked else "", func(): host.postcard_view.open(destination_id), "postcard_" + id, false, unlocked)
+		if id in Content.LONG_ROUTES:
+			var pages = int(data.get("travel_progress", {}).get(id, 0))
+			text_node(column, "旅册 %d 页 · 已完成 %d 册纪念章 · 下册 %d/3" % [pages, floori(pages / 3.0), pages % 3], 14)
 		var row = HBoxContainer.new()
 		column.add_child(row)
 		var common_known = host.world.discovered(route.common)
@@ -438,8 +444,8 @@ func shop_page() -> void:
 		if int(data.items.get(id, 0)) > 1 and host.world.discovered(id): command_tile(duplicates, id, Content.ITEMS[id].name, "拥有 %d · 保留首件" % data.items[id], "兑换 1 件 · +%d 叶币" % Content.ITEMS[id].value, "sell", {"item": id}, "sell_" + id)
 	line("厨房补给", true)
 	var goods = grid(3)
-	for id in Content.CROPS: command_tile(goods, id, Content.CROPS[id].name, "仓库 %d 份" % data.ingredients[id], "买一份 · 2 叶币", "buy", {"kind": "crop", "item": id}, "buy_" + id)
-	for id in Content.FOODS: command_tile(goods, id, Content.FOODS[id].name, "库存 %d · 补给 %d" % [data.foods[id], Content.FOODS[id].nutrition], "买一份 · %d 叶币" % (Content.FOODS[id].nutrition * 3), "buy", {"kind": "food", "item": id}, "buy_" + id)
+	for id in Content.CROPS: command_tile(goods, id, Content.CROPS[id].name, "仓库 %d 份" % data.ingredients[id], "买一份 · %d 叶币" % Content.CROP_PRICES[id], "buy", {"kind": "crop", "item": id}, "buy_" + id)
+	for id in Content.FOODS: command_tile(goods, id, Content.FOODS[id].name, "库存 %d · 补给 %d" % [data.foods[id], Content.FOODS[id].nutrition], "买一份 · %d 叶币" % Content.food_price(id), "buy", {"kind": "food", "item": id}, "buy_" + id)
 	line("给小屋添一点喜欢", true)
 	var furniture = grid(3)
 	for id in Content.DECOR:
@@ -534,7 +540,7 @@ func mailbox_page() -> void:
 	var cards = grid(2)
 	for entry in mail:
 		var letter = entry
-		var title = ("未读 · " if not entry.read else "已读 · ") + host.world.Mail.city_name(entry.destination)
+		var title = ("未读 · " if not entry.read else "已读 · ") + ("旅途报平安" if entry.get("reassurance", false) else host.world.Mail.city_name(entry.destination))
 		var date = Time.get_date_string_from_unix_time(int(entry.time))
 		tile(cards, entry.destination if entry.kind == "postcard" else "mail", title, "%s · 第%d次远行\n%s" % [date, entry.trip, "一张途中明信片" if entry.kind == "postcard" else "一封途中来信"], "展开阅读", func(): host.postcard_view.open_mail(letter); rebuild(), "mail_" + entry.id, false, entry.kind == "postcard")
 

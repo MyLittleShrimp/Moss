@@ -16,16 +16,23 @@ static func prepare(world, now: float) -> void:
 	if not world.data.has("travel_mail"): world.data.travel_mail = []
 	if float(world.data.trip_end) <= 0: return
 	var trip = world.data.trip_snapshot
-	if trip.get("mail_route_version") == 2: return
+	if trip.get("mail_route_version") == 3: return
+	if trip.get("mail_route_version") == 2:
+		fill_gaps(world, now)
+		return
 	trip.mail_route_version = 2
 	trip.mail_schedule = []
 	trip.mail_route = []
 	var destination = str(world.data.active_event.destination)
-	if trip.get("incident") == "forgot": return
+	if trip.get("incident") == "forgot":
+		trip.mail_route_version = 3
+		return
 	var points = ROUTES.get(destination, []).duplicate()
 	if destination == "iceland": points = ["shanghai", "dubai", "london", "stockholm" if world.rng.randf() < 0.5 else "copenhagen"]
 	trip.mail_route = points.duplicate()
-	if points.is_empty(): return
+	if points.is_empty():
+		fill_gaps(world, now)
+		return
 	# Old in-flight saves begin their new correspondence from upgrade time, never backdate it.
 	var remaining = float(world.data.trip_end) - now
 	if remaining <= 0: return
@@ -43,6 +50,42 @@ static func prepare(world, now: float) -> void:
 			"time": time, "destination": city, "trip": int(world.data.trip_count) + 1,
 			"kind": kind, "text": NOTES[city][world.rng.randi_range(0, NOTES[city].size() - 1)], "read": false})
 
+	fill_gaps(world, now)
+
+static func fill_gaps(world, now: float) -> void:
+	var trip = world.data.trip_snapshot
+	trip.mail_route_version = 3
+	if trip.get("incident") == "forgot":
+		trip.mail_route_version = 3
+		return
+	var destination = str(world.data.active_event.destination)
+	# Planned long journeys that detour still receive travel correspondence.
+	if trip.get("planned", destination) not in GameContent.LONG_ROUTES: return
+	var finish = float(world.data.trip_end)
+	if finish <= now: return
+	var gap = clampf(float(trip.get("mail_gap", 172800.0)), 1.0, 172800.0)
+	var events = trip.get("mail_schedule", []).duplicate(true)
+	events.sort_custom(func(a, b): return a.time < b.time)
+	var anchors = events.duplicate(true)
+	anchors.append({"time": finish})
+	var previous = now
+	var serial = 0
+	for event in anchors:
+		if float(event.time) <= now: continue
+		while float(event.time) - previous > gap and events.size() < 24:
+			previous += world.rng.randf_range(gap * 0.5, gap * 0.8)
+			serial += 1
+			events.append(reassurance(world, destination, previous, serial))
+		previous = float(event.time)
+	# A postcard may be omitted; one letter is nevertheless guaranteed on each new long trip.
+	if events.is_empty(): events.append(reassurance(world, destination, now + (finish - now) * world.rng.randf_range(0.35, 0.6), 0))
+	events.sort_custom(func(a, b): return a.time < b.time)
+	trip.mail_schedule = events
+
+static func reassurance(world, destination: String, time: float, serial: int) -> Dictionary:
+	var texts = ["路上平安。我把窗外一朵像便当的云画在纸角，等回家给你看。今天也记得给自己留一点休息的时间。", "写一封短信报个平安。遇见的人教了我一句新的问候，虽然还说得不熟练，已经想先说给你听。", "今晚整理行囊时，想起小屋的灯。我会慢慢走，也会好好吃饭，把路上的小事带回家。"]
+	return {"id": "%d:%d:note:%d:%d" % [int(world.data.trip_count) + 1, int(world.data.trip_end), int(time), serial], "time":time, "destination":destination, "trip":int(world.data.trip_count) + 1, "kind":"letter", "reassurance":true, "text":texts[world.rng.randi_range(0, texts.size() - 1)], "read":false}
+
 static func deliver(world, now: float) -> int:
 	prepare(world, now)
 	var count = 0
@@ -55,4 +98,4 @@ static func deliver(world, now: float) -> int:
 	return count
 
 static func valid(entry: Variant, world) -> bool:
-	return entry is Dictionary and entry.get("id") is String and entry.id.length() < 100 and world.numeric(entry.get("time")) and world.natural(entry.get("trip")) and (entry.get("destination") in NAMES or entry.get("destination") in world.Content.ROUTES) and entry.get("kind") in ["postcard", "letter"] and entry.get("text") is String and entry.text.length() <= 500 and entry.get("read") is bool
+	return entry is Dictionary and entry.get("id") is String and entry.id.length() < 100 and world.numeric(entry.get("time")) and world.natural(entry.get("trip")) and (entry.get("destination") in NAMES or entry.get("destination") in world.Content.ROUTES) and entry.get("kind") in ["postcard", "letter"] and entry.get("text") is String and entry.text.length() <= 500 and entry.get("read") is bool and (not entry.has("reassurance") or entry.reassurance is bool)

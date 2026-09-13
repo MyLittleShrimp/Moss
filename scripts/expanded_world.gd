@@ -6,11 +6,17 @@ var rng = RandomNumberGenerator.new()
 var release_timing = false
 const Timing = preload("res://scripts/build_profile.gd")
 
+func balanced_timing() -> bool:
+	return release_timing or data.pace == "balanced"
+
+func pace_scale() -> float:
+	return 60.0 if not release_timing and data.pace == "balanced" else 1.0
+
 func crop_seconds(id: String) -> float:
-	return float(Timing.CROPS[id]) if release_timing else float(Content.CROPS[id].seconds) / (10.0 if data.pace == "demo" else 1.0)
+	return float(Timing.CROPS[id]) / pace_scale() if balanced_timing() else float(Content.CROPS[id].seconds) / (10.0 if data.pace == "demo" else 1.0)
 
 func trip_bounds(id: String) -> Array:
-	return Timing.TRIPS[id] if release_timing else [Content.ROUTES[id].min, Content.ROUTES[id].max]
+	return Timing.TRIPS[id] if balanced_timing() else [Content.ROUTES[id].min, Content.ROUTES[id].max]
 
 func _init(path: String = "") -> void:
 	rng.randomize()
@@ -140,18 +146,21 @@ func command(action: String, payload: Dictionary = {}, now: float = -1.0, key: S
 			var duration = rng.randf_range(bounds[0], bounds[1])
 			if incident == "rain": duration *= 1.3
 			if incident == "friend": duration *= 1.15
-			if incident == "forgot": duration *= 0.2
-			if release_timing: duration = minf(duration, bounds[1])
+			if incident == "forgot":
+				if destination in Content.LONG_ROUTES and balanced_timing(): duration = rng.randf_range(3600.0, 57600.0)
+				else: duration *= 0.2
+			if balanced_timing(): duration = minf(duration, bounds[1]) / pace_scale()
 			elif data.pace == "demo": duration /= 60.0
 			var actual_route = Content.ROUTES[actual]
-			var rare = roll_rare(actual)
+			var rare = roll_rare(actual, snack)
 			for id in packed: data.foods[id] -= int(packed[id])
 			if snack: data.foods.berry_snack -= 1
 			data.trip_end = now + duration
 			data.trip_rain = data.rain_preference == "like"
 			data.trip_snapshot = {"planned": destination, "incident": incident, "common": actual_route.common,
 				"rare": rare, "food": food, "portions": portions, "provisions": packed.duplicate(true), "pace": data.pace,
-				"recovery_seconds": 20 if data.pace == "demo" else 600, "snack": snack}
+				"recovery_seconds": 600.0 / pace_scale() if balanced_timing() else (20 if data.pace == "demo" else 600), "snack": snack,
+				"mail_gap": 172800.0 / pace_scale() if balanced_timing() else 172800.0 * float(bounds[1]) / float(Timing.TRIPS[destination][1]) / (60.0 if data.pace == "demo" else 1.0)}
 			data.active_event = {"id": "g5_" + actual + "_" + incident, "destination": actual,
 				"title": Content.INCIDENTS[incident], "text": story(actual, incident)}
 			if snack and incident != "forgot" and rng.randf() < 0.35: data.active_event.text += "路边的小鸟闻到了草莓香，我分给它一点点心，它陪我走过了一小段路。"
@@ -169,10 +178,10 @@ func command(action: String, payload: Dictionary = {}, now: float = -1.0, key: S
 			match kind:
 				"crop":
 					if not Content.CROPS.has(item): return _fail("没有这件商品。")
-					price = 2
+					price = Content.CROP_PRICES[item]
 				"food":
 					if not Content.FOODS.has(item): return _fail("没有这件商品。")
-					price = Content.FOODS[item].nutrition * 3
+					price = Content.food_price(item)
 				"decor":
 					if not Content.DECOR.has(item) or item in data.decorations: return _fail("这件布置已经有了，或不存在。")
 					if Content.DECOR[item].get("reward_only", false): return _fail("这件纪念布置需要旅行发现，不能购买。")
@@ -214,7 +223,7 @@ func command(action: String, payload: Dictionary = {}, now: float = -1.0, key: S
 		"pace":
 			if release_timing: return _fail("发布版采用慢生活节奏。")
 			var pace = str(payload.get("pace", "normal"))
-			if pace not in ["normal", "demo"]: return _fail("未知节奏。")
+			if pace not in ["normal", "demo", "balanced"]: return _fail("未知节奏。")
 			data.pace = pace
 			message = "已切换节奏，仅影响之后播种和出发的旅程。"
 		"place", "remember":
@@ -256,12 +265,16 @@ func travel_check(destination: String, payload: Dictionary) -> Dictionary:
 	if total < Content.ROUTES[destination].supply: return _fail("补给不足：%d / %d。" % [total, Content.ROUTES[destination].supply])
 	return {"ok":true, "message":"行囊准备好了", "provisions":packed, "supply":total}
 
-func roll_rare(destination: String) -> String:
-	var route = Content.ROUTES[destination]
-	return route.rare if rng.randf() < float(route.chance) else ""
+func rare_chance(destination: String, snack: bool = false) -> float:
+	return minf(1.0, float(Content.ROUTES[destination].chance) + (0.15 if snack else 0.0))
+
+func roll_rare(destination: String, snack: bool = false) -> String:
+	return Content.ROUTES[destination].rare if rng.randf() < rare_chance(destination, snack) else ""
 
 func story(destination: String, incident: String) -> String:
-	if incident == "forgot": return "刚走出一段路，才想起日记本还在桌上。我转身跑回来了。没到目的地，食物也还没动，今天先在家找找东西。"
+	if incident == "forgot":
+		var moments = ["回头时遇见一只推着松果的小松鼠。我帮它推过坡，它送了我一声响亮的谢谢。", "等返程的车时，雨在站牌上敲出一支小曲。我用树叶接了一滴，忽然不觉得白跑了。", "路边卖面包的阿姨认出了我的围巾，教我在日记本上画一个提醒自己的小结。"]
+		return "日记本还落在桌上，我决定先回家。" + moments[rng.randi_range(0, moments.size() - 1)] + "虽然没到目的地，食物完整带回，也带回了这个小故事。"
 	var scenes = {"creek": "溪水把石头洗得亮亮的，我在桥边听了一会儿水声。", "market": "茶摊的主人留了一张小凳子，热茶里有森林的气味。", "hill": "风把蒲公英种子送向远方，我躺在草地上替它们选方向。", "hangzhou": "西湖的柳枝轻轻碰到水面，我从石桥这头慢慢走到那头。", "tokyo": "在东京的樱花树下，我看着红色高塔，听电车从远处经过。", "istanbul": "渡轮划过海峡，远处的圆顶映着落日，我在小店挑了一片蓝纹陶。"}
 	scenes.merge({"dali": "洱海的水把白云轻轻托住。晾在院子里的扎染布随风飘动，我坐在花田边，终于学会把一个下午慢慢过完。", "paris": "面包店刚开门，街角飘来温热的香气。我沿着河岸走，看到屋顶留住最后一点夕光，原来平凡的一天也值得画下来。", "iceland": "彩色小屋的窗灯亮着，港口安静得能听见雪落下。等了很久，天空终于划过一点绿色的光，我把那一刻记在心里。"})
 	var text = str(scenes[destination])
@@ -321,7 +334,7 @@ func valid_save(value: Variant) -> bool:
 			if not pair[1].has(id): return false
 	for id in value.equipped:
 		if id not in value.decorations: return false
-	if value.theme not in value.themes or value.condition not in ["well", "ill", "mood"] or value.pace not in ["normal", "demo"]: return false
+	if value.theme not in value.themes or value.condition not in ["well", "ill", "mood"] or value.pace not in ["normal", "demo", "balanced"]: return false
 	for field in ["letters", "events", "processed", "visited_event_ids"]:
 		if not value[field] is Array: return false
 	for entry in value.letters:

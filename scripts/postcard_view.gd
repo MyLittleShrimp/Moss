@@ -3,7 +3,7 @@ const Art = preload("res://scripts/item_art.gd")
 var host
 var picture: TextureRect
 var heading: Label
-var message: Label
+var message: RichTextLabel
 var wish: Label
 var stamp: Label
 var close_button: Button
@@ -47,7 +47,12 @@ func _ready() -> void:
 	heading = text("", 29)
 	stamp = text("", 16)
 	text("寄给：在小屋等我的你", 20)
-	message = text("", 21)
+	message = RichTextLabel.new()
+	message.bbcode_enabled = false
+	message.scroll_active = true
+	message.add_theme_color_override("default_color", host.INK)
+	message.add_theme_font_size_override("normal_font_size", 21)
+	text_side.add_child(message)
 	message.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	wish = text("", 22)
 	text("苔苔 敬上  ·  把这份风景也送给你", 17)
@@ -101,7 +106,7 @@ func open_mail(entry: Dictionary) -> void:
 	if not host.world.command("read_mail", {"id": entry.id}).ok: return
 	letter_mode = entry.kind == "letter"
 	picture.texture = Art.postcard(entry.destination)
-	heading.text = "途中来信 · " + host.world.Mail.city_name(entry.destination)
+	heading.text = "途中来信 · " + ("旅途报平安" if entry.get("reassurance", false) else host.world.Mail.city_name(entry.destination))
 	close_button.text = "收回信箱 ×"
 	var date = Time.get_datetime_string_from_unix_time(int(entry.time)).replace("T", " ").left(16)
 	stamp.text = "◉ 寄出邮戳（UTC） " + date + "\n第 %d 次远行 · %s" % [entry.trip, "本地旅行手记" if letter_mode else "AI 预绘风景 / 本地旅行手记"]

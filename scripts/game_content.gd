@@ -11,12 +11,12 @@ const CROPS = {
 	"potato": {"name": "土豆", "seconds": 1080, "yield": 4},
 	"strawberry": {"name": "草莓", "seconds": 1500, "yield": 2}}
 const FOODS = {
-	"herb_box": {"name": "香草便当", "recipe": {"herb": 1}, "nutrition": 1, "tier": 1},
-	"rice_ball": {"name": "田园饭团", "recipe": {"rice": 2, "herb": 1}, "nutrition": 3, "tier": 1},
-	"mushroom_box": {"name": "蘑菇双层便当", "recipe": {"rice": 2, "mushroom": 1}, "nutrition": 5, "tier": 2},
+	"herb_box": {"name": "香草便当", "recipe": {"herb": 2}, "nutrition": 1, "tier": 1},
+	"rice_ball": {"name": "田园饭团", "recipe": {"rice": 1, "herb": 2}, "nutrition": 3, "tier": 1},
+	"mushroom_box": {"name": "蘑菇双层便当", "recipe": {"rice": 1, "mushroom": 1}, "nutrition": 5, "tier": 2},
 	"feast": {"name": "南瓜远行餐", "recipe": {"rice": 2, "pumpkin": 1, "mushroom": 1}, "nutrition": 8, "tier": 3},
-	"corn_ball": {"name": "玉米饭团", "recipe": {"corn": 1, "rice": 1}, "nutrition": 5, "tier": 2},
-	"veggie_box": {"name": "田园蔬菜便当", "recipe": {"carrot": 1, "mushroom": 1, "rice": 2}, "nutrition": 9, "tier": 3},
+	"corn_ball": {"name": "玉米饭团", "recipe": {"corn": 4, "rice": 1}, "nutrition": 5, "tier": 2},
+	"veggie_box": {"name": "田园蔬菜便当", "recipe": {"carrot": 2, "mushroom": 1, "rice": 2}, "nutrition": 9, "tier": 3},
 	"potato_box": {"name": "烤土豆远行盒", "recipe": {"potato": 2, "pumpkin": 1, "herb": 1}, "nutrition": 12, "tier": 4},
 	"berry_snack": {"name": "草莓点心包", "recipe": {"strawberry": 1, "rice": 1}, "nutrition": 2, "tier": 1, "snack": true}}
 const ROUTES = {
@@ -60,3 +60,12 @@ static func incident(roll: float) -> String:
 	if roll < 0.90: return "friend"
 	if roll < 0.95: return "ill"
 	return "mood"
+
+# Prices follow per-unit growing cost; prepared meals include a convenience premium.
+const CROP_PRICES = {"herb": 1, "rice": 2, "corn": 3, "mushroom": 4, "carrot": 6, "pumpkin": 8, "potato": 12, "strawberry": 20}
+const LONG_ROUTES = ["tokyo", "istanbul", "paris", "iceland"]
+const PROGRESS_COINS = {"tokyo": 3, "istanbul": 5, "paris": 7, "iceland": 10}
+static func food_price(id: String) -> int:
+	var cost = 0
+	for crop in FOODS[id].recipe: cost += CROP_PRICES[crop] * FOODS[id].recipe[crop]
+	return ceili(cost * 1.2) + 1

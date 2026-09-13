@@ -14,7 +14,7 @@ func _initialize() -> void:
 	check(world.command("travel", {"destination": "iceland", "food": "potato_box"}, start).ok, "departure")
 	var end = world.data.trip_end
 	var schedule = world.data.trip_snapshot.mail_schedule.duplicate(true)
-	check(schedule.size() >= 1 and schedule.size() <= 4, "waypoint schedule")
+	check(schedule.size() >= 1 and schedule.size() <= 24, "waypoint schedule")
 	var previous = start
 	for entry in schedule:
 		check(entry.time > previous, "chronological intervals")
@@ -93,13 +93,14 @@ func _initialize() -> void:
 			var position = -1
 			var cities = []
 			for mail in mails:
+				if mail.get("reassurance", false): continue
 				check(mail.destination not in cities, "one mail per waypoint per trip")
 				check(planned.find(mail.destination) > position, "Shanghai before Dubai before Europe")
 				cities.append(mail.destination)
 				position = planned.find(mail.destination)
 				saw_postcard = saw_postcard or mail.kind == "postcard"
 				saw_letter = saw_letter or mail.kind == "letter"
-			if planned.size() > mails.size(): saw_omission = true
+			if planned.size() > cities.size(): saw_omission = true
 			if planned.size() == 4 and planned[-1] not in nordic: nordic.append(planned[-1])
 	check(saw_omission and saw_letter and saw_postcard, "random omissions and formats")
 	check("stockholm" in nordic and "copenhagen" in nordic, "both Nordic variants")
