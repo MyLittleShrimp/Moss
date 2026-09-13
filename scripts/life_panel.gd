@@ -330,13 +330,18 @@ func journey_page() -> void:
 	snack.disabled = data.foods.berry_snack < 1 or data.trip_end > 0
 	body.add_child(snack)
 	actions.snack = snack
-	line("草莓点心：本次稀有概率增加 15 个百分点（最高 100%），每趟限一包。点心不替代主食；折返完整退回。")
+	line("草莓点心：增加获得稀有物品的机会。额外带上一包，给旅途添一点甜。点心不替代主食。")
 	var detail = Content.ROUTES[destination]
 	line("当地回忆：%s · 隐藏收藏：%s" % [Content.ITEMS[detail.common].name if host.world.discovered(detail.common) else "未发现的纪念品", Content.ITEMS[detail.rare].name if host.world.discovered(detail.rare) else "神秘包裹 ?"])
-	line("此地最迟第%d次成功到访获得隐藏收藏；折返不计，绕路按实际到访地计。" % host.world.rare_guarantee(destination))
-	if destination in Content.LONG_ROUTES:
-		line("长旅旅册：已积累 %d 页，每次非折返完成行程添一页、得 %d 叶币；每 3 页完成一册，额外得 6 叶币。" % [data.get("travel_progress", {}).get(destination, 0), Content.PROGRESS_COINS[destination]])
-		line("途中至少一封来信，正常长旅连续无消息不超过两天。忘带东西会提前折返，食物原样带回。")
+	if host.world.release_timing:
+		line("有些小小的宝物，藏在不经意的相遇里。")
+		if destination in Content.LONG_ROUTES:
+			line("远行会为旅册添上新的回忆。路上歇脚时，苔苔也会寄来消息。")
+	else:
+		line("此地最迟第%d次成功到访获得隐藏收藏；折返不计，绕路按实际到访地计。" % host.world.rare_guarantee(destination))
+		if destination in Content.LONG_ROUTES:
+			line("长旅旅册：已积累 %d 页，每次非折返完成行程添一页、得 %d 叶币；每 3 页完成一册，额外得 6 叶币。" % [data.get("travel_progress", {}).get(destination, 0), Content.PROGRESS_COINS[destination]])
+			line("途中至少一封来信，正常长旅连续无消息不超过两天。忘带东西会提前折返，食物原样带回。")
 	for item in Rewards.ROOM_REWARDS:
 		if item in [detail.common, detail.rare]: line("小屋纪念奖励：" + (Rewards.ROOM_REWARDS[item].name if host.world.discovered(item) else "一件来自这里的神秘布置"))
 	for outfit in Rewards.OUTFITS.values():
@@ -373,7 +378,10 @@ func collection_page() -> void:
 		var column = tile(collection, id if unlocked else "unknown", route.name, "已到访 · 一封远方的信" if unlocked else "明信片尚未寄到", "展开明信片 ↗" if unlocked else "", func(): host.postcard_view.open(destination_id), "postcard_" + id, false, unlocked)
 		if id in Content.LONG_ROUTES:
 			var pages = int(data.get("travel_progress", {}).get(id, 0))
-			text_node(column, "旅册 %d 页 · 已完成 %d 册纪念章 · 下册 %d/3" % [pages, floori(pages / 3.0), pages % 3], 14)
+			if host.world.release_timing:
+				text_node(column, "旅册已留下 %d 页回忆" % pages if pages > 0 else "新的旅册，等一段远方的故事", 14)
+			else:
+				text_node(column, "旅册 %d 页 · 已完成 %d 册纪念章 · 下册 %d/3" % [pages, floori(pages / 3.0), pages % 3], 14)
 		var row = HBoxContainer.new()
 		column.add_child(row)
 		var common_known = host.world.discovered(route.common)
