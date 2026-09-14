@@ -41,12 +41,12 @@
 
 ## 下载与开始
 
-进入 [G18 下载页面](https://github.com/MyLittleShrimp/Moss/releases/tag/g18)，选择对应的 Windows 压缩包：
+进入 [G22 下载页面](https://github.com/MyLittleShrimp/Moss/releases/tag/g22)，选择对应的 Windows 压缩包：
 
 | 版本 | 文件 | 适合谁 |
 |---|---|---|
-| 正式版 | [正式版下载](https://github.com/MyLittleShrimp/Moss/releases/download/g18/Moss-Release-G18-Audio-Windows.zip) | 想体验慢生活、保留探索惊喜的玩家 |
-| 开发版 | [开发版下载](https://github.com/MyLittleShrimp/Moss/releases/download/g18/Moss-Development-G18-Audio-Windows.zip) | 想快速体验或帮助测试的玩家，含多档加速与机制说明 |
+| 正式版 | [正式版下载](https://github.com/MyLittleShrimp/Moss/releases/download/g22/Moss-Release-G22-Audio-Windows.zip) | 想体验慢生活、保留探索惊喜的玩家 |
+| 开发版 | [开发版下载](https://github.com/MyLittleShrimp/Moss/releases/download/g22/Moss-Development-G22-Audio-Windows.zip) | 想快速体验或帮助测试的玩家，含多档加速与机制说明 |
 
 完整解压后，双击文件夹中的 `Start.cmd`。两个版本都包含音乐与音效，不用另外安装 Godot。更新前关闭旧窗口；保存生活可在设置中导出备份。
 
@@ -73,7 +73,7 @@
 
 ## 当前边界
 
-这是本地单人原型。G21 本地版本增加可选 AI 旅行手记与途中信件：阅读时请求，成功后保存，失败仍可读原始本地文本。离线每日小书包含按月日编排的 366 篇、1098 页，采用十二个月主题与三十一组故事结构组合，每年循环。旅册进展仍由本地规则决定。明信片插画仍是预生成资源；绘图设置仅预留接口，不发送请求。AI 文本不会直接发放物品或修改奖励。GitHub 当前 G18 下载包尚不包含 G21 功能。
+这是本地单人原型。当前版本支持可选 AI 旅行手记与途中信件：阅读时请求，成功后保存，失败仍可读原始本地文本。离线每日小书包含按月日编排的 366 篇、1098 页，采用十二个月主题与三十一组故事结构组合，每年循环。旅册进展仍由本地规则决定。明信片插画仍是预生成资源；绘图设置仅预留接口，不发送请求。AI 文本不会直接发放物品或修改奖励。G22 还修复了茶杯窗台摆放，并统一收藏奖励图标。
 
 小屋使用预设摆放位置；暂不支持全屋自由拖动、云存档或完整 Agent/MCP 接入。欢迎通过 Issues 反馈体验和问题，请不要贴出 API Key 或包含密钥的配置文件。
 
