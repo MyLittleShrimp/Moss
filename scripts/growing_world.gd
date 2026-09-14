@@ -85,17 +85,11 @@ func command(action: String, payload: Dictionary = {}, now: float = -1, key: Str
 	return result
 
 func ensure_book(day: String) -> void:
-	if data.daily_book.get("day") == day: return
-	var seed_value = absi(day.hash())
-	var subjects = ["蜗牛邮差", "迷路的蒲公英", "会发光的小池塘", "山坡上的茶摊", "一片想旅行的叶子", "戴围巾的小蘑菇", "收集云影的松鼠"]
-	var places = ["窗台", "小桥", "草丛", "旧地图的背面", "湖边", "屋檐下"]
-	var surprises = ["原来礼物是一段留给朋友的安静。", "等风停了，它们交换了各自的小故事。", "走错的小路，恰好开满了花。", "地图没有答案，一杯热茶却带来了方向。", "今天什么也没赶上，却看见一朵云变成了船。"]
-	var subject = subjects[seed_value % subjects.size()]
-	var place = places[(seed_value / 7) % places.size()]
-	data.daily_book = {"day": day, "source": "local", "attempted": false, "pages": [
-		"今日小故事 · " + day + "\n\n" + subject + "把一张空白纸条放在" + place + "，想看看今天会遇到谁。",
-		"风把纸角轻轻翻起，像是在邀请它绕一点路。\n\n" + surprises[(seed_value / 13) % surprises.size()],
-		"留给今天的一个小问题\n\n如果给" + subject + "准备一份礼物，你会装进便当盒，还是夹在书页里？"]}
+	if data.daily_book.get("day") == day and (data.daily_book.get("source") == "llm" or data.daily_book.get("catalog_version") == 1): return
+	var story = preload("res://scripts/yearbook.gd").entry(day)
+	var pages = story.pages
+	pages[0] = "今日小书 · " + story.title + "\n\n" + pages[0]
+	data.daily_book = {"day":day, "source":"local", "catalog_version":1, "attempted":false, "pages":pages}
 	data.book_page = 0
 	persist()
 

@@ -30,3 +30,6 @@ saves/
 slots/
 *.corrupt-*
 *.v*-backup
+
+ai-image-settings.cfg
+/docs/images/*.import

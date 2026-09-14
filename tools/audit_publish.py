@@ -7,7 +7,7 @@ PATTERNS = {
     "private-key": re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\r\n]+[A-Za-z0-9+/=\r\n]{64,}-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     "literal-key": re.compile(rb"(?:api_key|DEEPSEEK_API_KEY|OPENAI_API_KEY)[\"']?\s*[:=]\s*[\"'][A-Za-z0-9_./+:-]{20,}[\"']", re.I),
 }
-DENIED = re.compile(r"(?:^|/)(?:\.local|\.godot|saves|slots)(?:/|$)|(?:^|/)(?:\.env(?:\..*)?|ai-settings\.cfg|ai-key[^/]*|proxy-token|moss_save[^/]*\.json)$|\.(?:enc|dpapi|pem|key)$", re.I)
+DENIED = re.compile(r"(?:^|/)(?:\.local|\.godot|saves|slots)(?:/|$)|(?:^|/)(?:\.env(?:\..*)?|ai-(?:image-)?settings\.cfg|ai-key[^/]*|proxy-token|moss_save[^/]*\.json)$|\.(?:enc|dpapi|pem|key)$", re.I)
 def forbidden(name, exported=False):
     # These are required Godot runtime assets, not editor/user configuration.
     if exported and (re.fullmatch(r"\.godot/imported/[^/]+\.(?:ctex|oggvorbisstr)", name) or re.fullmatch(r"\.godot/exported/[^/]+/[^/]+\.scn", name) or name in [".godot/global_script_class_cache.cfg", ".godot/uid_cache.bin"]):
@@ -30,6 +30,11 @@ def scan_archive(data, location, hits):
             count += 1
     return count
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--label', default='G18')
+    label = parser.parse_args().label
+    assert label.isalnum()
     hits=[]
     paths=subprocess.check_output(["git","ls-files","--cached","--others","--exclude-standard","-z"],cwd=ROOT).decode().split("\0")
     for path in filter(None,paths):
@@ -50,7 +55,7 @@ def main():
     proc.stdin.close();proc.wait()
     packages={}
     for channel in ["Release","Development"]:
-        path=ROOT/"dist"/f"Moss-{channel}-G18-Audio-Windows.zip"
+        path=ROOT/"dist"/f"Moss-{channel}-{label}-Audio-Windows.zip"
         packages[path.name]=scan_archive(path.read_bytes(),path.name,hits)
     report={"result":"PASS" if not hits else "REVIEW_REQUIRED","working_files":len([p for p in paths if p]),"history_blobs":blobs,"package_members_including_nested":packages,"matches":hits,"scope":"Known token/private-key/literal-key patterns and private filenames; no secret values printed. Screenshots reviewed separately."}
     (ROOT/"artifacts").mkdir(exist_ok=True)

@@ -45,6 +45,8 @@ var tick = 0.0
 var conversation = "苔苔：欢迎回家。种一点香草吧，今天想去溪谷散步。"
 var qa_mode = false
 var ai_client
+var narrative_service
+var image_config
 var ai_toggle: CheckButton
 var ai_label: Label
 var route: OptionButton
@@ -85,10 +87,15 @@ func _ready() -> void:
 	mail_button = button_at("途中信箱", Rect2(730, 17, 140, 37), func(): life_panel.open("信箱"))
 	parcel_view = load("res://scripts/parcel_view.gd").new(self)
 	add_child(parcel_view)
+	image_config = preload("res://scripts/postcard_image_config.gd").new()
+	if not qa_mode: image_config.load_settings()
 	settings_panel = load("res://scripts/settings_panel.gd").new(self)
 	add_child(settings_panel)
 	audio_manager = load("res://scripts/game_audio.gd").new(self, "" if qa_mode else "user://audio-settings.cfg")
 	add_child(audio_manager)
+	narrative_service = preload("res://scripts/narrative_service.gd").new(self)
+	add_child(narrative_service)
+	narrative_service.updated.connect(func(_kind, _id): refresh(); postcard_view.refresh_narrative())
 	button_at("设置 · 存档", Rect2(880, 17, 170, 37), func(): settings_panel.open())
 	refresh()
 	if "--smoke-test" in OS.get_cmdline_user_args():
@@ -172,15 +179,15 @@ func build_ui() -> void:
 	ai_label = label_at("本地规则对话", Rect2(1050, 76, 365, 24), 13, MUTED)
 	ai_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	ai_toggle = CheckButton.new()
-	ai_toggle.text = "启用 AI 对话"
+	ai_toggle.text = "启用 AI 陪伴"
 	ai_toggle.position = Vector2(785, 69)
 	ai_toggle.size = Vector2(235, 35)
 	ai_toggle.add_theme_color_override("font_color", INK)
 	ai_toggle.add_theme_color_override("font_pressed_color", INK)
 	ai_toggle.add_theme_color_override("font_hover_color", INK)
 	ai_toggle.add_theme_color_override("font_hover_pressed_color", INK)
-	ai_toggle.tooltip_text = "先在设置中配置自己的模型；启用后会发送本次纸条与相关游戏上下文。"
-	ai_toggle.toggled.connect(func(on): ai_client.enabled = on)
+	ai_toggle.tooltip_text = "先在设置中配置自己的模型；启用后，对话、小书及旅行文字可发送相关游戏上下文。"
+	ai_toggle.toggled.connect(func(on): ai_client.enabled = on; ai_client.generation += 1)
 	add_child(ai_toggle)
 	var image = TextureRect.new()
 	room_background = image
@@ -269,9 +276,11 @@ func set_tab(value: String) -> void:
 	tab = value
 	refresh()
 	if value == "记忆": life_panel.open("记忆")
+	if value == "旅途" and not world.data.letters.is_empty(): narrative_service.request_entry("travel", world.data.letters[clampi(letter_index, 0, world.data.letters.size() - 1)])
 
 func browse_letter(direction: int) -> void:
 	letter_index = clampi(letter_index + direction, 0, maxi(0, world.data.letters.size() - 1))
+	if not world.data.letters.is_empty(): narrative_service.request_entry("travel", world.data.letters[letter_index])
 	refresh()
 
 func destination_name() -> String:
@@ -387,7 +396,7 @@ func refresh() -> void:
 			journal.text = "等一封远方的信\n\n" + ("苔苔带着便当，在路上慢慢走。关掉游戏后，旅程也会继续。" if away else "去厨房做好食物，在远行中挑一个目的地。更远的地方，需要更充足的行囊。")
 			if not world.data.letters.is_empty():
 				var letter = world.data.letters[clampi(letter_index, 0, world.data.letters.size() - 1)]
-				journal.text = "%s · 第 %d 次\n%s\n\n%s\n\n随信带回：%s" % [Content.ROUTES.get(letter.get("destination", "creek"), Content.ROUTES.creek).name, letter.trip, letter.get("title", "旧日的小旅行"), letter.text, letter.get("rewards", "一份纪念")]
+				journal.text = "%s · 第 %d 次\n%s\n\n%s\n\n随信带回：%s" % [Content.ROUTES.get(letter.get("destination", "creek"), Content.ROUTES.creek).name, letter.trip, letter.get("title", "旧日的小旅行") + " · " + world.narrative_source(letter), world.narrative_text(letter), letter.get("rewards", "一份纪念")]
 
 func _process(delta: float) -> void:
 	if world == null:
@@ -403,6 +412,7 @@ func _process(delta: float) -> void:
 		if world.advance(world.clock()):
 			letter_index = 0
 			notice.text = "门外传来脚步声——苔苔回家了，还带着一封信。"
+			narrative_service.request_entry("travel", world.data.letters[0])
 			tab = "旅途"
 		elif world.mail_arrivals > 0:
 			notice.text = "信箱里多了 %d 封途中来信，苔苔把沿途的小日子寄回来了。" % world.mail_arrivals

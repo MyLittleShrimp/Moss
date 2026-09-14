@@ -177,10 +177,11 @@ func open_book(page: int) -> void:
 		book_client.enabled = true
 		var epoch = int(host.world.data.memory_epoch)
 		var requesting_world = host.world
+		var generation = host.ai_client.generation
 		render_book()
 		var reply = await book_client.reply("请为今天写一篇温柔、有一点意外的三页小故事。", host.ai_facts(), "daily_book")
 		book_loading = false
-		if host.world == requesting_world and reply.ok and host.ai_client.enabled: host.world.finish_book(day, epoch, reply.text)
+		if host.world == requesting_world and reply.ok and host.ai_client.enabled and generation == host.ai_client.generation: host.world.finish_book(day, epoch, reply.text)
 		render_book()
 
 func render_book() -> void:
@@ -188,7 +189,7 @@ func render_book() -> void:
 	if book.is_empty(): return
 	var page = int(host.world.data.book_page)
 	book_text.text = book.pages[page] + "\n\n— %d / 3 —" % (page + 1)
-	book_source.text = book.day + " · " + ("正在写今天的小故事…" if book_loading else ("AI 生成 · 今日已保存" if book.source == "llm" else ("今日离线小故事 · AI 暂不可用" if book.attempted else "今日离线小故事 · 开启 AI 后可生成")))
+	book_source.text = book.day + " · " + ("正在写今天的小故事…" if book_loading else ("AI 生成 · 今日已保存" if book.source == "llm" else ("今日离线小故事 · AI 暂不可用" if book.attempted else "全年离线故事库 · 开启 AI 后可生成")))
 	book_previous.disabled = page == 0
 	book_next.disabled = page == 2
 

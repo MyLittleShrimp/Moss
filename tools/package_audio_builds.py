@@ -12,6 +12,8 @@ for channel in ['Release', 'Development']:
     with zipfile.ZipFile(target/'game.zip') as archive:
         names = archive.namelist()
         assert 'assets/audio/catalog.json' in names
+        if label == 'G21':
+            assert len(json.loads(archive.read('assets/text/yearbook.json'))['entries']) == 366
         assert not any(n.startswith(('OST/', 'SoundFX/')) for n in names)
         for entry in catalog.values():
             path = entry['path'].removeprefix('res://')

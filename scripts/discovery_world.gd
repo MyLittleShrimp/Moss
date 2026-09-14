@@ -54,6 +54,7 @@ func advance(now: float) -> bool:
 			var coins = Content.PROGRESS_COINS[destination] + (6 if pages % 3 == 0 else 0)
 			data.coins += coins
 			progress_note = "旅册新进展 · %s 第 %d 页 · 叶币 +%d%s" % [Content.ROUTES[destination].name, pages, coins, " · 新一册纪念章完成" if pages % 3 == 0 else ""]
+			data.active_event.progress_text = progress_note
 			var chapter = progress_story(destination, pages)
 			if actual != destination: chapter = "改道小记：原本计划去" + Content.ROUTES[destination].name + "，这次跟朋友去了" + Content.ROUTES[actual].name + "。在旅册里画一条弯弯的线，记住这次意外的相聚；原定的远方留给下一次。"
 			data.active_event.text += "\n\n" + chapter + "\n本次行程实际到访：" + Content.ROUTES[actual].name + "。\n" + progress_note
@@ -149,7 +150,7 @@ func valid_save(value: Variant) -> bool:
 	if not archive is Array or archive.size() > 60 or not schedule is Array or schedule.size() > 24: return false
 	var ids = []
 	for entry in archive + schedule:
-		if not Mail.valid(entry, self) or entry.id in ids: return false
+		if not Mail.valid(entry, self) or not valid_narrative(entry) or entry.id in ids: return false
 		ids.append(entry.id)
 	var previous = -1.0
 	var cities = []

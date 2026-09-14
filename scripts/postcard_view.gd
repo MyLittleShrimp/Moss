@@ -12,6 +12,9 @@ var text_side: Control
 var large = false
 var letter_mode = false
 var audio_destination = ""
+var current_kind = ""
+var current_id = ""
+var ai_button: Button
 func _init(owner_node) -> void:
 	host = owner_node
 func _ready() -> void:
@@ -58,6 +61,8 @@ func _ready() -> void:
 	text("苔苔 敬上  ·  把这份风景也送给你", 17)
 	photo_button = host.button_at("只看风景 / 返回明信片", Rect2(140, 735, 420, 44), func(): large = not large; layout_card())
 	photo_button.reparent(self)
+	ai_button = host.button_at("用 AI 写一封", Rect2(590, 735, 450, 44), request_narrative)
+	ai_button.reparent(self)
 	close_button = host.button_at("收回相册 ×", Rect2(1090, 735, 200, 44), func(): hide())
 	close_button.reparent(self)
 	hide()
@@ -74,17 +79,25 @@ func text(value: String, size: int) -> Label:
 func open(id: String) -> void:
 	audio_destination = id
 	letter_mode = false
+	current_kind = "travel"
+	current_id = ""
+	for entry in host.world.data.letters:
+		if entry.get("destination") == id and not str(entry.get("event_id", "")).ends_with("_forgot"):
+			current_id = host.narrative_service.entry_id("travel", entry)
+			break
 	close_button.text = "收回相册 ×"
 	var card = host.world.postcard_content(id)
 	if card.is_empty(): return
 	picture.texture = Art.postcard(id)
 	heading.text = "来自 " + card.title + " 的明信片"
-	stamp.text = "◉ 旅行邮戳   " + card.date + "\n" + card.trip + "  ·  AI 预绘风景 / 本地旅行手记"
+	stamp.text = "◉ 旅行邮戳   " + card.date + "\n" + card.trip + "  ·  预绘风景 / " + str(card.get("source", "本地旅行手记"))
 	message.text = card.text
 	wish.text = card.wish
 	large = false
 	layout_card()
 	show()
+	refresh_narrative()
+	queue_narrative()
 func layout_card() -> void:
 	photo_button.visible = not letter_mode
 	picture.visible = not letter_mode
@@ -103,19 +116,43 @@ func layout_card() -> void:
 
 func open_mail(entry: Dictionary) -> void:
 	audio_destination = entry.destination
+	current_kind = "mail"
+	current_id = str(entry.id)
 	if not host.world.command("read_mail", {"id": entry.id}).ok: return
 	letter_mode = entry.kind == "letter"
 	picture.texture = Art.postcard(entry.destination)
 	heading.text = "途中来信 · " + ("旅途报平安" if entry.get("reassurance", false) else host.world.Mail.city_name(entry.destination))
 	close_button.text = "收回信箱 ×"
 	var date = Time.get_datetime_string_from_unix_time(int(entry.time)).replace("T", " ").left(16)
-	stamp.text = "◉ 寄出邮戳（UTC） " + date + "\n第 %d 次远行 · %s" % [entry.trip, "本地旅行手记" if letter_mode else "AI 预绘风景 / 本地旅行手记"]
-	message.text = entry.text
+	stamp.text = "◉ 寄出邮戳（UTC） " + date + "\n第 %d 次远行 · %s" % [entry.trip, host.world.narrative_source(entry) if letter_mode else "预绘风景 / " + host.world.narrative_source(entry)]
+	message.text = host.world.narrative_text(entry)
 	wish.text = "愿你今天的小日子，也有一点亮光。"
 	large = letter_mode
 	layout_card()
 	show()
+	refresh_narrative()
+	queue_narrative()
 func _unhandled_key_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):
 		hide()
 		get_viewport().set_input_as_handled()
+
+func queue_narrative() -> void:
+	var entry = host.narrative_service.find_entry(host.world, current_kind, current_id)
+	if not entry.is_empty(): host.narrative_service.request_entry(current_kind, entry)
+
+func request_narrative() -> void:
+	var entry = host.narrative_service.find_entry(host.world, current_kind, current_id)
+	if entry.is_empty(): return
+	host.narrative_service.request_entry(current_kind, entry, true)
+	ai_button.text = "正在写，先读读本地手记…"
+	ai_button.disabled = true
+
+func refresh_narrative() -> void:
+	if not visible: return
+	var entry = host.narrative_service.find_entry(host.world, current_kind, current_id)
+	ai_button.disabled = entry.is_empty() or not host.ai_client.enabled or entry.has("ai_text")
+	ai_button.text = "AI 文字已保存" if entry.has("ai_text") else ("用 AI 写一封 / 重试" if host.ai_client.enabled else "开启 AI 陪伴后可生成")
+	if entry.is_empty(): return
+	message.text = host.world.narrative_text(entry)
+	stamp.text = "◉ %s · 第 %d 次\n%s" % [Time.get_datetime_string_from_unix_time(int(entry.get("time", 0))).replace("T", " ").left(16) + " UTC", int(entry.get("trip", 0)), host.world.narrative_source(entry)]

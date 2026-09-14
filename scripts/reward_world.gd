@@ -88,7 +88,7 @@ func postcard_content(id: String) -> Dictionary:
 	if id not in data.postcards or not Content.ROUTES.has(id): return {}
 	for letter in data.letters:
 		if letter.get("destination") == id and not str(letter.get("event_id", "")).ends_with("_forgot"):
-			return {"title": Content.ROUTES[id].name, "text": letter.text, "wish": WISHES[id], "trip": "第 %d 次旅行" % letter.trip, "date": today(float(letter.get("time", clock())))}
+			return {"title": Content.ROUTES[id].name, "text": narrative_text(letter), "source": narrative_source(letter), "wish": WISHES[id], "trip": "第 %d 次旅行" % letter.trip, "date": today(float(letter.get("time", clock())))}
 	return {"title": Content.ROUTES[id].name, "text": "整理旧相册时，发现了这张从远方带回的风景。那时的详细手记已经不在了，见过的世界仍留在这里。", "wish": WISHES[id], "trip": "旧日相册", "date": "日期未记录"}
 
 func migrate(value: Variant) -> Variant:

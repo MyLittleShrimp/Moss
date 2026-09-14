@@ -77,7 +77,7 @@ func advance(now: float) -> bool:
 			for id in packed: data.foods[id] += int(packed[id])
 			if trip.get("snack", false): data.foods.berry_snack += 1
 			rewards.append("未用的食物已放回厨房")
-		data.letters.push_front({"text": event.text, "title": event.title, "destination": event.destination,
+		data.letters.push_front({"progress_text": event.get("progress_text", ""), "text": event.text, "title": event.title, "destination": event.destination,
 			"event_id": event.id, "trip": data.trip_count, "time": now, "rewards": "、".join(rewards)})
 		if data.letters.size() > 60: data.letters.resize(60)
 		data.visited_event_ids.append(event.id)
@@ -338,7 +338,7 @@ func valid_save(value: Variant) -> bool:
 	for field in ["letters", "events", "processed", "visited_event_ids"]:
 		if not value[field] is Array: return false
 	for entry in value.letters:
-		if not entry is Dictionary or not entry.get("text") is String or not natural(entry.get("trip")): return false
+		if not entry is Dictionary or not entry.get("text") is String or not natural(entry.get("trip")) or not valid_narrative(entry): return false
 	for entry in value.events:
 		if not entry is Dictionary or not entry.get("text") is String: return false
 	if float(value.trip_end) > 0:
@@ -365,3 +365,15 @@ func numeric(value: Variant) -> bool:
 
 func natural(value: Variant) -> bool:
 	return numeric(value) and float(value) == floorf(float(value))
+
+func narrative_text(entry: Dictionary) -> String:
+	if not str(entry.get("ai_text", "")).is_empty():
+		var progress = str(entry.get("progress_text", ""))
+		return str(entry.ai_text) + ("\n\n" + progress if not progress.is_empty() else "")
+	return str(entry.get("text", ""))
+
+func narrative_source(entry: Dictionary) -> String:
+	return "AI 生成 · 已保存" if not str(entry.get("ai_text", "")).is_empty() else ("本地旅行手记 · AI 未生成" if entry.get("ai_attempted", false) else "本地旅行手记")
+
+func valid_narrative(entry: Dictionary) -> bool:
+	return (not entry.has("ai_text") or (entry.ai_text is String and not entry.ai_text.strip_edges().is_empty() and entry.ai_text.length() <= 240)) and (not entry.has("ai_attempted") or entry.ai_attempted is bool) and (not entry.has("progress_text") or (entry.progress_text is String and entry.progress_text.length() <= 300))

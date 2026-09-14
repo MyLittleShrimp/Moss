@@ -83,6 +83,7 @@ func _ready() -> void:
 	button(tabs, "我的 AI 模型", ai_page, "ai_tab")
 	button(tabs, "存档与搬家", saves_page, "save_tab")
 	button(tabs, "音乐与声音", audio_page, "audio_tab")
+	button(tabs, "明信片绘图 · 预留", image_page, "image_tab")
 	var scroll = ScrollContainer.new()
 	scroll.custom_minimum_size.y = 550
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -150,14 +151,14 @@ func open() -> void:
 
 func ai_page() -> void:
 	clear_body()
-	label("选择自己的模型。启用 AI 后，对话、小书会发送相关游戏上下文；关闭后仍可离线游玩。")
+	label("选择自己的模型。启用 AI 后，对话、小书、旅行手记和途中信件会发送相关游戏上下文；关闭后仍可离线游玩。")
 	var presets = HBoxContainer.new()
 	body.add_child(presets)
 	button(presets, "本机 Ollama", func(): url.text = "http://127.0.0.1:11434/v1/chat/completions"; model_name.text = ""; key.text = ""; remember.button_pressed = false)
 	button(presets, "DeepSeek（自备 Key）", func(): url.text = "https://api.deepseek.com/chat/completions"; model_name.text = "deepseek-chat"; key.text = ""; remember.button_pressed = false)
 	button(presets, "自定义兼容接口", func(): url.text = ""; model_name.text = ""; key.text = ""; remember.button_pressed = false)
-	url = field("完整接口地址", host.ai_client.endpoint)
-	url.placeholder_text = "https://服务商/v1/chat/completions"
+	url = field("接口 / 基础地址", host.ai_client.endpoint)
+	url.placeholder_text = "https://服务商/v1 或完整自定义路径"
 	model_name = field("模型名称", host.ai_client.model)
 	model_name.placeholder_text = "填写服务商模型 ID，或 ollama list 中的模型名称"
 	key = field("API Key", host.ai_client.api_key, true)
@@ -244,8 +245,9 @@ func audio_page() -> void:
 func save_ai() -> void:
 	if host.home_interactions.book_loading: feedback.text = "请等小书生成结束再修改配置。"; return
 	var problem = host.ai_client.configure(url.text, model_name.text, key.text, remember.button_pressed, password.text)
-	feedback.text = "已保存。回小屋勾选“启用 AI 对话”即可使用。" if problem.is_empty() else problem
+	feedback.text = "已保存。回小屋勾选“启用 AI 陪伴”即可使用。" if problem.is_empty() else problem
 	password.text = ""
+	if problem.is_empty(): url.text = host.ai_client.endpoint
 
 func unlock_key() -> void:
 	if host.ai_client.busy: feedback.text = "请等当前请求结束。"; return
@@ -326,3 +328,35 @@ func file_selected(path: String) -> void:
 		host.activate_save(next)
 		saves_page()
 		feedback.text = "已导入为新档，源文件保持不变。"
+
+func image_page() -> void:
+	clear_body()
+	label("明信片实时绘图 · 后续扩展")
+	label("目前仅保存接口设置，游戏仍使用已有插画。不会发送绘图请求或产生绘图调用费用。")
+	var image = host.image_config
+	var image_url = field("绘图接口地址", image.endpoint)
+	image_url.placeholder_text = "https://服务商/v1/images/generations 或自定义完整地址"
+	var image_model = field("绘图模型", image.model)
+	var image_key = field("绘图 API Key", image.api_key, true)
+	image_key.placeholder_text = "独立于文字模型；本次运行保留，或选择加密保存"
+	var size = OptionButton.new()
+	for item in ["1024x1024", "1536x1024", "1024x1536"]: size.add_item(item)
+	size.select(maxi(0, ["1024x1024", "1536x1024", "1024x1536"].find(image.image_size)))
+	body.add_child(size)
+	var keep = CheckBox.new()
+	keep.text = "在本机加密保存绘图 Key"
+	body.add_child(keep)
+	var passphrase = field("密钥解锁口令", "", true)
+	var controls = HBoxContainer.new()
+	body.add_child(controls)
+	button(controls, "保存预留配置", func():
+		var issue = image.configure(image_url.text, image_model.text, image_key.text, size.get_item_text(size.selected), keep.button_pressed, passphrase.text)
+		passphrase.text = ""
+		feedback.text = "绘图配置已保存。功能尚未启用，仍使用预绘插画。" if issue.is_empty() else issue
+		if issue.is_empty(): image_url.text = image.endpoint, "image_save")
+	button(controls, "解锁绘图 Key", func():
+		var ok = image.unlock(passphrase.text)
+		passphrase.text = ""
+		if ok: image_key.text = image.api_key
+		feedback.text = "绘图 Key 已解锁，仅驻留本次运行。" if ok else "解锁失败，请检查口令。", "image_unlock")
+	label("预留协议：兼容图像生成JSON请求（model / prompt / size / n）。模型支持的尺寸与返回格式将在实时绘图功能中适配。配置与Key不随游戏存档导出。")
