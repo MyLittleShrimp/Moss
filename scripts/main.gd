@@ -224,6 +224,13 @@ func build_ui() -> void:
 	stone = label_at("●", Rect2(277, 270, 44, 40), 32, Color("779b95"))
 	stone.add_theme_color_override("font_shadow_color", Color("3f655d"))
 	stone.add_theme_constant_override("shadow_offset_y", 3)
+	var cup = Sprite2D.new()
+	cup.name = "WindowCup"
+	cup.texture = preload("res://scripts/item_art.gd").texture("teacup")
+	cup.material = preload("res://scripts/item_art.gd").matte_material()
+	cup.position = Vector2(266, 291)
+	cup.scale = Vector2(0.20, 0.20)
+	add_child(cup)
 	panel(Rect2(44, 722, 966, 60), Color(0.98, 0.97, 0.92, 0.95), 14)
 	notice = label_at("先点右边的花圃，种下今天的第一株香草。", Rect2(62, 731, 925, 40), 17)
 	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -383,6 +390,7 @@ func refresh() -> void:
 	room_floor.state = world.data
 	home_interactions.refresh()
 	stone.visible = bool(world.data.placed)
+	get_node("WindowCup").visible = bool(world.data.get("window_cup", false))
 	frog.visible = not away
 	pet_label.visible = not away
 	pet_label.text = "苔苔 · 惦记窗边的青石" if world.data.placed else "苔苔 · 在家发呆"

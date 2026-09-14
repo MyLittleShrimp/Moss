@@ -10,7 +10,7 @@ const OUTFITS = {
 	"beret": {"name": "贝雷帽画家装", "item": "iris", "route": "paris", "note": "在街角画下今天的光"},
 	"aurora": {"name": "极光毛线帽冬装", "item": "auroraglass", "route": "iceland", "note": "把极夜的一点光带回家"}}
 const ROOM_REWARDS = {
-	"teacup": {"name": "茶摊送的小绿植", "kind": "plant", "item": "leaf"},
+	"teacup": {"name": "窗台上的木纹茶杯", "kind": "keepsake", "item": "teacup"},
 	"goldseed": {"name": "山坡的春日花盆", "kind": "plant", "item": "flower"},
 	"glowstone": {"name": "微光纪念灯", "kind": "decor", "item": "lantern"},
 	"ceramic": {"name": "蓝纹旅途的落日地毯", "kind": "rug", "item": "sunset"},
@@ -55,13 +55,24 @@ func advance(now: float) -> bool:
 	return returned
 
 func command(action: String, payload: Dictionary = {}, now: float = -1, key: String = "") -> Dictionary:
-	if action not in ["wear", "claim_room_reward"]: return super.command(action, payload, now, key)
+	if action == "place":
+		var result = super.command(action, payload, now, key)
+		if result.ok:
+			data.window_cup = false
+			persist()
+		return result
+	if action not in ["wear", "claim_room_reward", "window_cup"]: return super.command(action, payload, now, key)
 	if now < 0: now = clock()
 	advance(now)
 	if not key.is_empty() and key in data.processed: return _fail("这次操作已经处理过啦。")
 	var id = str(payload.get("item", ""))
 	var message = ""
-	if action == "wear":
+	if action == "window_cup":
+		if "teacup" not in data.claimed_room_rewards: return _fail("先领取木纹茶杯的小屋奖励吧。")
+		data.window_cup = not data.get("window_cup", false)
+		if data.window_cup: data.placed = false
+		message = "把木纹茶杯摆上窗台，青石先收进收藏。" if data.window_cup else "收起茶杯，给窗台留一点空白。"
+	elif action == "wear":
 		if not outfit_unlocked(id): return _fail("先找到对应旅行宝物，再来试穿吧。")
 		data.outfit = id
 		message = "换上了" + OUTFITS[id].name + "。收藏会一直保留。"
@@ -74,7 +85,7 @@ func command(action: String, payload: Dictionary = {}, now: float = -1, key: Str
 			if "plant" not in data.decorations: data.decorations.append("plant")
 		elif gift.kind == "rug":
 			if gift.item not in data.rugs: data.rugs.append(gift.item)
-		elif gift.item not in data.decorations: data.decorations.append(gift.item)
+		elif gift.kind == "decor" and gift.item not in data.decorations: data.decorations.append(gift.item)
 		data.claimed_room_rewards.append(id)
 		message = "收下了" + gift.name + "，去「小屋」摆放吧。宝物无需消耗；已拥有的款式不会重复发放。"
 	if not key.is_empty():
@@ -103,6 +114,8 @@ func migrate(value: Variant) -> Variant:
 
 func valid_save(value: Variant) -> bool:
 	if not value is Dictionary or value.get("schema") != 6: return false
+	if not value.get("window_cup", false) is bool: return false
+	if value.get("window_cup", false) and (value.get("placed", false) or "teacup" not in value.get("claimed_room_rewards", [])): return false
 	var base = value.duplicate(true)
 	base.schema = 5
 	if not super.valid_save(base): return false

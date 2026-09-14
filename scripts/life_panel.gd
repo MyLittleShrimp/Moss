@@ -398,7 +398,8 @@ func collection_page() -> void:
 		var gift = Rewards.ROOM_REWARDS[id]
 		var found = host.world.discovered(id)
 		var claimed = id in data.claimed_room_rewards
-		tile(gifts, id if found else "unknown", gift.name if found else "神秘小屋布置", "发现" + Content.ITEMS[id].name + "后解锁" if found else "从旅行包裹中发现", "去小屋摆放" if claimed else ("领取小屋奖励" if found else "尚未发现"), func():
+		var gift_art = Home.PLANTS[gift.item].art if gift.kind == "plant" else gift.item
+		tile(gifts, gift_art if found else "unknown", gift.name if found else "神秘小屋布置", "发现" + Content.ITEMS[id].name + "后解锁" if found else "从旅行包裹中发现", "去小屋摆放" if claimed else ("领取小屋奖励" if found else "尚未发现"), func():
 			if gift_id in host.world.data.claimed_room_rewards: open("小屋")
 			else: execute("claim_room_reward", {"item": gift_id}), "gift_" + id)
 		actions["gift_" + id].disabled = not found
@@ -476,6 +477,8 @@ func home_page() -> void:
 		actions["plant_" + id].disabled = "plant" not in data.decorations
 		if "plant" not in data.decorations: actions["plant_" + id].text = "先在小铺带回一盆植物"
 	command_tile(plants, "stone", "窗台上的青石", "一段溪边的回忆", "已经安放" if data.placed else "摆上窗台", "place", {}, "place")
+	if "teacup" in data.claimed_room_rewards:
+		command_tile(plants, "teacup", "窗台上的木纹茶杯", "与青石共用窗台位置，可随时换回", "收起茶杯" if data.get("window_cup", false) else "摆上窗台 · 替换青石", "window_cup", {}, "window_cup")
 	line("地毯与装饰")
 	var furniture = grid(3)
 	for id in data.rugs: command_tile(furniture, id, Home.RUGS[id].name, "柔软地留住脚步", "✓ 已铺好" if data.rug == id else "铺上这张地毯", "rug", {"item": id}, "rug_" + id)
