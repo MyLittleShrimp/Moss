@@ -17,3 +17,16 @@ script_templates/
 text_editor_themes/
 OST/
 SoundFX/
+
+# Local credentials and player data must never be published.
+.env.*
+!.env.example
+*.key
+*.pem
+ai-key*
+audio-settings.cfg
+moss_save*.json
+saves/
+slots/
+*.corrupt-*
+*.v*-backup
