@@ -1,5 +1,7 @@
 # GitHub 上传准备
 
+当前仓库：https://github.com/MyLittleShrimp/Moss 。源码已上传，游戏发布页为 https://github.com/MyLittleShrimp/Moss/releases/tag/g18 。下面首次上传命令仅供历史参考，不要在已有远程仓库上重复初始化。
+
 ## 仓库简介（可直接粘贴到 About）
 
 苔间小屋：一款支持自备 AI 模型的治愈系青蛙旅行养成游戏。种植、烹饪、远行、收集明信片与装扮，在慢生活中等一封远方的信。Godot / Windows。
@@ -20,7 +22,7 @@ GitHub Releases 支持二进制附件，官方单文件限制为2 GiB；这两�
 
 ## 用现有Git历史上传
 
-当前开发成果在 develop；本地 main 是旧阶段，不要误推旧 main。Git历史已纳入本次敏感信息模式扫描。
+当前开发成果在 develop，跟踪 origin/main；本地 main 是旧阶段，不要误推旧 main。Git历史已纳入本次敏感信息模式扫描。
 
 在GitHub创建一个空仓库（不要预建README或许可证），复制它的HTTPS地址。以下命令只供你在准备好目标仓库后执行：
 
@@ -29,7 +31,7 @@ git remote add origin <你的GitHub仓库HTTPS地址>
 git push -u origin develop:main
 ```
 
-把本地最新develop推到新仓库main，保留已有历史；这里没有执行远程推送。如已有origin或远端已有内容，先核对目标，不要直接覆盖或强推。
+把本地最新develop推到新仓库main，保留已有历史；首次准备时没有执行远程推送；后续G20已完成实际上传。如已有origin或远端已有内容，先核对目标，不要直接覆盖或强推。
 
 随后在GitHub创建Release，选择刚推送的main提交，添加新标签（例如g18），粘贴发布说明，上传两个游戏ZIP和校验文件。README图片为仓库内相对链接，无需修改账号或仓库名。
 

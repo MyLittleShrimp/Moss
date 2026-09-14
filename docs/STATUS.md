@@ -2,7 +2,11 @@
 
 更新：2026-09-14。Godot 4.6.2 / GDScript，本地单用户可玩原型。
 
-## 当前阶段：G19 GitHub发布材料准备
+## 当前阶段：G20 GitHub上传
+
+源码已推送至[MyLittleShrimp/Moss](https://github.com/MyLittleShrimp/Moss)的main分支，正式版/开发版及SHA-256文件发布于[G18 Release](https://github.com/MyLittleShrimp/Moss/releases/tag/g18)。README提供直接下载链接。凭证通过现有Git登录在内存使用，源码及双包发布前审计通过，未上传本机配置和玩家存档。见[G20交接](handoffs/G20_GitHub上传交接.md)。游戏内容仍为G18。
+
+## 上一阶段：G19 GitHub发布材料准备
 
 README更新为当前游戏介绍，宣传片六张截图已放入仓库；准备About简介、Release正文、上传说明、敏感信息检查和干净源码打包工具。源码与历史、G18双包嵌套资源扫描通过，扫描器4项验证通过。输出目录dist/GitHub-Upload，详见[G19交接](handoffs/G19_GitHub发布准备交接.md)。游戏仍为G18，未创建远程仓库或上传；项目整体许可证尚未指定。
 

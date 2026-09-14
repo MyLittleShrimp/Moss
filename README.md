@@ -41,16 +41,16 @@
 
 ## 下载与开始
 
-进入本仓库的 **Releases**，选择对应的 Windows 压缩包：
+进入 [G18 下载页面](https://github.com/MyLittleShrimp/Moss/releases/tag/g18)，选择对应的 Windows 压缩包：
 
 | 版本 | 文件 | 适合谁 |
 |---|---|---|
-| 正式版 | `Moss-Release-G18-Audio-Windows.zip` | 想体验慢生活、保留探索惊喜的玩家 |
-| 开发版 | `Moss-Development-G18-Audio-Windows.zip` | 想快速体验或帮助测试的玩家，含多档加速与机制说明 |
+| 正式版 | [正式版下载](https://github.com/MyLittleShrimp/Moss/releases/download/g18/Moss-Release-G18-Audio-Windows.zip) | 想体验慢生活、保留探索惊喜的玩家 |
+| 开发版 | [开发版下载](https://github.com/MyLittleShrimp/Moss/releases/download/g18/Moss-Development-G18-Audio-Windows.zip) | 想快速体验或帮助测试的玩家，含多档加速与机制说明 |
 
 完整解压后，双击文件夹中的 `Start.cmd`。两个版本都包含音乐与音效，不用另外安装 Godot。更新前关闭旧窗口；保存生活可在设置中导出备份。
 
-> 若 Releases 暂无附件，说明维护者尚未发布二进制包；本仓库源码可按下面的方法运行。
+下载页附有 SHA-256 校验文件；源码也可以按下面的方法运行。
 
 ## 存档与搬家
 
